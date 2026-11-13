@@ -1,0 +1,8 @@
+{
+  "name": "KinetiQ",
+  "description": "Modern, first health and wellness companion for daily activity, hydration, sleep, habits, and evidence-based AI lifestyle guidance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
