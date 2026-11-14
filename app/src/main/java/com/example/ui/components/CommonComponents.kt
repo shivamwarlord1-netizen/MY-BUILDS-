@@ -60,27 +60,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.BioCyan
-import com.example.ui.theme.BioCyanTrack
-import com.example.ui.theme.DuskIndigo
-import com.example.ui.theme.DuskIndigoTrack
-import com.example.ui.theme.KineticViolet
-import com.example.ui.theme.KineticVioletTrack
-import com.example.ui.theme.KinetiqBlack
-import com.example.ui.theme.KinetiqBorderGlow
-import com.example.ui.theme.KinetiqBorderSubtle
 import com.example.ui.theme.KinetiqBrandTitleStyle
-import com.example.ui.theme.KinetiqCardSurface
-import com.example.ui.theme.KinetiqElevatedCard
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqPurpleLavender
-import com.example.ui.theme.KinetiqPurpleNeon
-import com.example.ui.theme.KinetiqPurplePrimary
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
-import com.example.ui.theme.RadiantAmber
-import com.example.ui.theme.RadiantAmberTrack
+import com.example.ui.theme.kinetiqColors
 import com.example.ui.viewmodel.Screen
 
 @Composable
@@ -255,6 +236,8 @@ fun HolisticWellnessRing(
     label = "anim_habit_ring"
   )
 
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   val breathingScale = rememberBreathingScale(minScale = 0.97f, maxScale = 1.03f, durationMillis = 2800)
 
   Card(
@@ -263,12 +246,12 @@ fun HolisticWellnessRing(
       .border(
         width = 1.dp,
         brush = Brush.linearGradient(
-          colors = listOf(KinetiqBorderGlow.copy(alpha = 0.45f), KinetiqBorderSubtle.copy(alpha = 0.3f))
+          colors = listOf(colorScheme.primary.copy(alpha = 0.42f), colorScheme.outline.copy(alpha = 0.45f))
         ),
         shape = RoundedCornerShape(26.dp)
       ),
     shape = RoundedCornerShape(26.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface),
+    colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
   ) {
     Column(
@@ -287,22 +270,22 @@ fun HolisticWellnessRing(
               fontWeight = FontWeight.Bold,
               letterSpacing = 1.5.sp
             ),
-            color = KinetiqPurpleNeon
+            color = colorScheme.primary
           )
           Text(
             text = "Holistic Daily Load",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = KinetiqTextWhite
+            color = colorScheme.onSurface
           )
         }
 
         Box(
           modifier = Modifier
             .background(
-              color = KinetiqObsidianSurface,
+              color = colorScheme.surface,
               shape = RoundedCornerShape(10.dp)
             )
-            .border(0.8.dp, KinetiqBorderSubtle, RoundedCornerShape(10.dp))
+            .border(0.8.dp, colorScheme.outline.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp)
         ) {
           Text(
@@ -312,7 +295,7 @@ fun HolisticWellnessRing(
               letterSpacing = 1.sp,
               fontSize = 10.sp
             ),
-            color = KinetiqPurpleLavender
+            color = colorScheme.primary
           )
         }
       }
@@ -329,12 +312,12 @@ fun HolisticWellnessRing(
           // Track 1 (Outer): Kinetic Movement
           val r1 = (size.minDimension / 2) - strokeWidth
           drawCircle(
-            color = KineticVioletTrack,
+            color = semanticColors.steps.copy(alpha = 0.18f),
             radius = r1,
             style = Stroke(strokeWidth)
           )
           drawArc(
-            color = KineticViolet,
+            color = semanticColors.steps,
             startAngle = -90f,
             sweepAngle = animSteps * 360f,
             useCenter = false,
@@ -344,12 +327,12 @@ fun HolisticWellnessRing(
           // Track 2: Bio Hydration
           val r2 = r1 - strokeWidth - 5.dp.toPx()
           drawCircle(
-            color = BioCyanTrack,
+            color = semanticColors.water.copy(alpha = 0.18f),
             radius = r2,
             style = Stroke(strokeWidth)
           )
           drawArc(
-            color = BioCyan,
+            color = semanticColors.water,
             startAngle = -90f,
             sweepAngle = animWater * 360f,
             useCenter = false,
@@ -359,12 +342,12 @@ fun HolisticWellnessRing(
           // Track 3: Restorative Sleep
           val r3 = r2 - strokeWidth - 5.dp.toPx()
           drawCircle(
-            color = DuskIndigoTrack,
+            color = semanticColors.sleep.copy(alpha = 0.18f),
             radius = r3,
             style = Stroke(strokeWidth)
           )
           drawArc(
-            color = DuskIndigo,
+            color = semanticColors.sleep,
             startAngle = -90f,
             sweepAngle = animSleep * 360f,
             useCenter = false,
@@ -374,12 +357,12 @@ fun HolisticWellnessRing(
           // Track 4 (Inner): Mindful Habits
           val r4 = r3 - strokeWidth - 5.dp.toPx()
           drawCircle(
-            color = RadiantAmberTrack,
+            color = semanticColors.habits.copy(alpha = 0.18f),
             radius = r4,
             style = Stroke(strokeWidth)
           )
           drawArc(
-            color = RadiantAmber,
+            color = semanticColors.habits,
             startAngle = -90f,
             sweepAngle = animHabits * 360f,
             useCenter = false,
@@ -400,7 +383,7 @@ fun HolisticWellnessRing(
               fontSize = 28.sp,
               letterSpacing = (-0.5).sp
             ),
-            color = KinetiqTextWhite
+            color = colorScheme.onSurface
           )
           Text(
             text = "OPTIMAL",
@@ -409,18 +392,18 @@ fun HolisticWellnessRing(
               letterSpacing = 1.2.sp,
               fontSize = 9.sp
             ),
-            color = KinetiqPurpleNeon
+            color = colorScheme.primary
           )
         }
       }
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Legend in sleek dark capsule
+      // Legend in sleek themed capsule
       Surface(
-        color = KinetiqObsidianSurface,
+        color = colorScheme.surface,
         shape = RoundedCornerShape(14.dp),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, KinetiqBorderSubtle),
+        border = BorderStroke(0.8.dp, colorScheme.outline.copy(alpha = 0.6f)),
         modifier = Modifier.fillMaxWidth()
       ) {
         Row(
@@ -429,10 +412,10 @@ fun HolisticWellnessRing(
             .padding(horizontal = 14.dp, vertical = 10.dp),
           horizontalArrangement = Arrangement.SpaceBetween
         ) {
-          LegendChip("Kinetic", KineticViolet)
-          LegendChip("Hydration", BioCyan)
-          LegendChip("Sleep", DuskIndigo)
-          LegendChip("Habits", RadiantAmber)
+          LegendChip("Kinetic", semanticColors.steps)
+          LegendChip("Hydration", semanticColors.water)
+          LegendChip("Sleep", semanticColors.sleep)
+          LegendChip("Habits", semanticColors.habits)
         }
       }
     }
@@ -451,7 +434,7 @@ private fun LegendChip(label: String, color: Color) {
     Text(
       text = label,
       style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-      color = KinetiqTextMuted
+      color = MaterialTheme.colorScheme.onSurfaceVariant
     )
   }
 }

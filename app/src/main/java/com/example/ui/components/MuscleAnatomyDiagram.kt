@@ -40,12 +40,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.exercise.AnatomyType
-import com.example.ui.theme.KinetiqBlack
-import com.example.ui.theme.KinetiqBorderSubtle
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
 
 /**
  * Visual anatomical muscle targeting diagram:
@@ -70,13 +64,16 @@ fun MuscleAnatomyDiagram(
     label = "pulse_alpha"
   )
 
+  val colorScheme = MaterialTheme.colorScheme
+  val silhouetteBase = colorScheme.onSurface.copy(alpha = 0.14f)
+
   Surface(
     modifier = modifier
       .fillMaxWidth()
       .height(height)
-      .border(0.8.dp, KinetiqBorderSubtle, RoundedCornerShape(18.dp)),
+      .border(0.8.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(18.dp)),
     shape = RoundedCornerShape(18.dp),
-    color = KinetiqObsidianSurface
+    color = colorScheme.surface
   ) {
     Row(
       modifier = Modifier
@@ -93,7 +90,7 @@ fun MuscleAnatomyDiagram(
         Canvas(modifier = Modifier.size(width = 100.dp, height = 150.dp)) {
           val w = size.width
           val h = size.height
-          val baseColor = Color.White.copy(alpha = 0.12f)
+          val baseColor = silhouetteBase
           val activeColor = highlightColor.copy(alpha = pulseAlpha)
 
           // 1. Head & Neck
@@ -221,7 +218,7 @@ fun MuscleAnatomyDiagram(
           text = getAnatomyLabel(anatomyType),
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            color = KinetiqTextWhite
+            color = colorScheme.onSurface
           )
         )
 
@@ -230,7 +227,7 @@ fun MuscleAnatomyDiagram(
         Text(
           text = getAnatomyDescription(anatomyType),
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted,
+          color = colorScheme.onSurfaceVariant,
           lineHeight = 16.sp
         )
       }

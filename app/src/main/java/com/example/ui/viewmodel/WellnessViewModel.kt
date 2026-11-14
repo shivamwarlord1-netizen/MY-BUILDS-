@@ -13,6 +13,7 @@ import com.example.data.model.SleepRecord
 import com.example.data.model.UserProfile
 import com.example.data.repository.WellnessRepository
 import com.example.steps.StepAnchorStore
+import com.example.steps.StepMilestoneNotifier
 import com.example.steps.StepPermissionHelper
 import com.example.steps.StepTrackerStatus
 import com.example.steps.StepTrackingService
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -41,6 +43,7 @@ data class WellnessUiState(
   val todayHabitLogs: List<HabitLog> = emptyList(),
   val userProfile: UserProfile = UserProfile(),
   val pastWeekActivities: List<ActivityRecord> = emptyList(),
+  val pastWeekHydration: List<HydrationRecord> = emptyList(),
   val pastWeekSleep: List<SleepRecord> = emptyList(),
   val pastWeekHabitLogs: List<HabitLog> = emptyList(),
   val pastWeekDates: List<String> = emptyList(),
@@ -81,8 +84,28 @@ class WellnessViewModel(application: Application) : AndroidViewModel(application
   private val habitLogsFlow = repository.getHabitLogsForDate(todayDate)
   private val profileFlow = repository.userProfile
   private val weekActivityFlow = repository.getActivitiesInRange(past7Days.first(), past7Days.last())
+  private val weekHydrationFlow = repository.getHydrationInRange(past7Days.first(), past7Days.last())
   private val weekSleepFlow = repository.getSleepInRange(past7Days.first(), past7Days.last())
   private val weekHabitsFlow = repository.getHabitLogsInRange(past7Days.first(), past7Days.last())
+
+  init {
+    viewModelScope.launch {
+      combine(activityFlow, profileFlow) { activity, profile ->
+        val steps = activity?.stepCount ?: 0
+        val target = profile?.targetSteps ?: activity?.targetSteps ?: 8000
+        steps to target
+      }
+        .distinctUntilChanged()
+        .collect { (steps, target) ->
+          StepMilestoneNotifier.checkAndNotify(
+            context = getApplication(),
+            date = todayDate,
+            steps = steps,
+            targetSteps = target
+          )
+        }
+    }
+  }
 
   val uiState: StateFlow<WellnessUiState> = combine(
     combine(activityFlow, waterLogsFlow, waterTotalFlow, sleepFlow) { act, wLogs, wTotal, slp ->
@@ -91,8 +114,8 @@ class WellnessViewModel(application: Application) : AndroidViewModel(application
     combine(habitsFlow, habitLogsFlow, profileFlow) { hab, hLogs, prof ->
       Triple(hab, hLogs, prof ?: UserProfile())
     },
-    combine(weekActivityFlow, weekSleepFlow, weekHabitsFlow) { wAct, wSlp, wHLogs ->
-      Triple(wAct, wSlp, wHLogs)
+    combine(weekActivityFlow, weekHydrationFlow, weekSleepFlow, weekHabitsFlow) { wAct, wHyd, wSlp, wHLogs ->
+      Tuple4(wAct, wHyd, wSlp, wHLogs)
     },
     combine(
       _currentScreen,
@@ -112,9 +135,10 @@ class WellnessViewModel(application: Application) : AndroidViewModel(application
       activeHabits = t2.first,
       todayHabitLogs = t2.second,
       userProfile = t2.third,
-      pastWeekActivities = t3.first,
-      pastWeekSleep = t3.second,
-      pastWeekHabitLogs = t3.third,
+      pastWeekActivities = t3.a,
+      pastWeekHydration = t3.b,
+      pastWeekSleep = t3.c,
+      pastWeekHabitLogs = t3.d,
       pastWeekDates = past7Days,
       currentScreen = t4.first,
       stepTrackerStatus = t4.third,
@@ -243,10 +267,15 @@ class WellnessViewModel(application: Application) : AndroidViewModel(application
     }
   }
 
-  fun toggleHabit(habitId: Long) {
+  fun toggleHabit(habitId: Long, date: String = todayDate) {
     viewModelScope.launch {
-      val isDone = uiState.value.todayHabitLogs.any { it.habitId == habitId }
-      repository.toggleHabit(habitId, todayDate, isDone)
+      val logsForDate = if (date == todayDate) {
+        uiState.value.todayHabitLogs
+      } else {
+        uiState.value.pastWeekHabitLogs.filter { it.date == date }
+      }
+      val isDone = logsForDate.any { it.habitId == habitId }
+      repository.toggleHabit(habitId, date, isDone)
     }
   }
 
@@ -288,6 +317,7 @@ class WellnessViewModel(application: Application) : AndroidViewModel(application
       }
     }
     StepAnchorStore.clearAll(app)
+    StepMilestoneNotifier.clearAll(app)
     _trackerRefreshTick.value += 1
 
     viewModelScope.launch {

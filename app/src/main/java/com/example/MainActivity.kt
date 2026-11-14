@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
       val systemDark = isSystemInDarkTheme()
       val isDarkTheme = when (uiState.userProfile.darkModeSetting) {
-        "light" -> false
+        "light", "simple" -> false
         "system" -> systemDark
         else -> true
       }

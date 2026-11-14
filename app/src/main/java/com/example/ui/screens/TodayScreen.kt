@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+
 package com.example.ui.screens
 
 import android.content.Intent
@@ -6,28 +8,34 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,7 +43,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,45 +53,34 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.SelfImprovement
-import androidx.compose.material.icons.filled.Sensors
-import androidx.compose.material.icons.filled.SensorsOff
 import androidx.compose.material.icons.filled.Spa
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,56 +90,256 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.data.exercise.Exercise
+import com.example.data.exercise.ExerciseDatabase
+import com.example.data.exercise.ExerciseTier
 import com.example.data.model.ActivityRecord
 import com.example.data.model.Habit
+import com.example.data.model.HabitLog
+import com.example.data.model.HydrationRecord
+import com.example.data.model.SleepRecord
 import com.example.steps.StepPermissionHelper
 import com.example.steps.StepTrackerStatus
-import com.example.ui.components.HolisticWellnessRing
 import com.example.ui.components.MedicalDisclaimerBanner
-import com.example.ui.components.bounceClick
-import com.example.ui.theme.BioCyan
-import com.example.ui.theme.DuskIndigo
-import com.example.ui.theme.KineticViolet
-import com.example.ui.theme.KinetiqBlack
-import com.example.ui.theme.KinetiqBorderGlow
-import com.example.ui.theme.KinetiqBorderSubtle
-import com.example.ui.theme.KinetiqCardSurface
-import com.example.ui.theme.KinetiqElevatedCard
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqPurpleDeep
-import com.example.ui.theme.KinetiqPurpleLavender
-import com.example.ui.theme.KinetiqPurpleNeon
-import com.example.ui.theme.KinetiqPurplePrimary
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
-import com.example.ui.theme.RadiantAmber
+import com.example.ui.theme.KinetiqHeroScoreStyle
+import com.example.ui.theme.KinetiqSemanticColors
+import com.example.ui.theme.KinetiqValueTextStyle
+import com.example.ui.theme.kinetiqColors
 import com.example.ui.viewmodel.WellnessUiState
 import com.example.ui.viewmodel.WellnessViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
+
+// ============================================================================
+// Pure Domain Helpers (Real Data Calculations & Legacy Test Compatibility)
+// ============================================================================
+
+data class DailyStepPoint(
+  val date: String,
+  val dayLabel: String,
+  val steps: Int,
+  val isToday: Boolean
+)
+
+fun buildWeeklyStepPoints(
+  pastWeekDates: List<String>,
+  pastWeekActivities: List<ActivityRecord>,
+  todayDate: String,
+  currentSteps: Int
+): List<DailyStepPoint> {
+  val activityMap = pastWeekActivities.associateBy { it.date }
+  val inputFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+  val dayFmt = SimpleDateFormat("EEE", Locale.getDefault())
+
+  return pastWeekDates.map { dateStr ->
+    val isToday = dateStr == todayDate
+    val steps = if (isToday) currentSteps else (activityMap[dateStr]?.stepCount ?: 0)
+    val dayLabel = if (isToday) {
+      "Today"
+    } else {
+      try {
+        inputFmt.parse(dateStr)?.let { dayFmt.format(it) } ?: dateStr.takeLast(2)
+      } catch (_: Exception) {
+        dateStr.takeLast(2)
+      }
+    }
+    DailyStepPoint(date = dateStr, dayLabel = dayLabel, steps = steps, isToday = isToday)
+  }
+}
+
+data class TodayDayStripItem(
+  val date: String,
+  val dayShort: String,
+  val dayNumber: String,
+  val fullLabel: String,
+  val isToday: Boolean,
+  val readinessRatio: Float,
+  val hasAnyRecord: Boolean
+)
+
+data class TodayReadinessSummary(
+  val scorePercent: Int,
+  val statusLabel: String,
+  val coachingInsight: String,
+  val streakDays: Int,
+  val isHighReadiness: Boolean
+)
+
+fun buildSevenDayStrip(
+  pastWeekDates: List<String>,
+  todayDate: String,
+  targetSteps: Int,
+  targetWaterMl: Int,
+  targetSleepHours: Float,
+  totalHabits: Int,
+  todaySteps: Int,
+  todayWaterMl: Int,
+  todaySleepMinutes: Int,
+  todayHabitCount: Int,
+  pastWeekActivities: List<ActivityRecord>,
+  pastWeekHydration: List<HydrationRecord>,
+  pastWeekSleep: List<SleepRecord>,
+  pastWeekHabitLogs: List<HabitLog>
+): List<TodayDayStripItem> {
+  val activityByDate = pastWeekActivities.associateBy { it.date }
+  val waterByDate = pastWeekHydration.groupBy { it.date }.mapValues { (_, list) -> list.sumOf { it.amountMl } }
+  val sleepByDate = pastWeekSleep.associateBy { it.date }
+  val habitsByDate = pastWeekHabitLogs.groupBy { it.date }
+
+  val parseFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+  val shortDayFmt = SimpleDateFormat("EEE", Locale.getDefault())
+  val numFmt = SimpleDateFormat("d", Locale.getDefault())
+  val fullFmt = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
+
+  return pastWeekDates.map { date ->
+    val isToday = date == todayDate
+    val steps = if (isToday) todaySteps else (activityByDate[date]?.stepCount ?: 0)
+    val water = if (isToday) todayWaterMl else (waterByDate[date] ?: 0)
+    val sleepMin = if (isToday) todaySleepMinutes else (sleepByDate[date]?.durationMinutes ?: 0)
+    val habitCnt = if (isToday) todayHabitCount else (habitsByDate[date]?.size ?: 0)
+
+    val stepRatio = (steps.toFloat() / targetSteps.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val waterRatio = (water.toFloat() / targetWaterMl.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val sleepRatio = ((sleepMin / 60f) / targetSleepHours.coerceAtLeast(1f)).coerceIn(0f, 1f)
+    val habitRatio = if (totalHabits > 0) (habitCnt.toFloat() / totalHabits).coerceIn(0f, 1f) else 0f
+
+    val parsed = try { parseFmt.parse(date) } catch (_: Exception) { null }
+    val hasRecord = steps > 0 || water > 0 || sleepMin > 0 || habitCnt > 0 || activityByDate[date]?.isRestDay == true
+    val readiness = ((stepRatio + waterRatio + sleepRatio + habitRatio) / 4f).coerceIn(0f, 1f)
+
+    TodayDayStripItem(
+      date = date,
+      dayShort = parsed?.let { shortDayFmt.format(it).take(3) } ?: date.takeLast(2),
+      dayNumber = parsed?.let { numFmt.format(it) } ?: date.takeLast(2),
+      fullLabel = if (isToday) "Today" else (parsed?.let { fullFmt.format(it) } ?: date),
+      isToday = isToday,
+      readinessRatio = readiness,
+      hasAnyRecord = hasRecord
+    )
+  }
+}
+
+fun computeTodayReadiness(
+  stepProgress: Float,
+  waterProgress: Float,
+  sleepProgress: Float,
+  habitProgress: Float,
+  isRestDay: Boolean,
+  waterRemainingMl: Int,
+  stepsRemaining: Int,
+  sleepMinutes: Int,
+  stripItems: List<TodayDayStripItem>
+): TodayReadinessSummary {
+  var streak = 0
+  for (item in stripItems.asReversed()) {
+    if (item.hasAnyRecord) streak += 1
+    else if (!item.isToday) break
+  }
+
+  val rawScore = if (isRestDay) {
+    ((waterProgress * 0.35f + sleepProgress * 0.40f + habitProgress * 0.25f) * 100f).roundToInt().coerceIn(0, 100)
+  } else {
+    (((stepProgress + waterProgress + sleepProgress + habitProgress) / 4f) * 100f).roundToInt().coerceIn(0, 100)
+  }
+
+  val statusLabel = when {
+    isRestDay -> "REST DAY ACTIVE"
+    rawScore >= 85 -> "OPTIMAL BALANCE"
+    rawScore >= 55 -> "STEADY PACE"
+    rawScore > 0 -> "WARMING UP"
+    else -> "READY TO START"
+  }
+
+  val insight = when {
+    isRestDay -> "Rest day active. Focus on light hydration and sleep tonight."
+    rawScore == 0 -> "Log your first glass of water"
+    waterRemainingMl >= 250 -> "You're ${waterRemainingMl} ml behind on water. A glass now keeps you on track."
+    stepsRemaining >= 500 -> "${formatStepCount(stepsRemaining)} steps left to hit today's movement goal."
+    sleepMinutes <= 0 -> "Log last night's sleep to complete today's balance."
+    habitProgress < 1f -> "Finish your remaining habits to round out the day."
+    else -> "All four pillars balanced today. Nicely paced."
+  }
+
+  return TodayReadinessSummary(
+    scorePercent = rawScore,
+    statusLabel = statusLabel,
+    coachingInsight = insight,
+    streakDays = streak,
+    isHighReadiness = rawScore >= 75 || isRestDay
+  )
+}
+
+fun pickFeaturedExercise(isRestDay: Boolean, rotationOffset: Int): Exercise {
+  val pool = if (isRestDay) {
+    ExerciseDatabase.getExercisesByTier(ExerciseTier.BEGINNER)
+  } else {
+    ExerciseDatabase.exercises
+  }
+  if (pool.isEmpty()) return ExerciseDatabase.exercises.first()
+  val idx = ((rotationOffset % pool.size) + pool.size) % pool.size
+  return pool[idx]
+}
+
+internal fun formatStepCount(steps: Int): String {
+  return String.format(Locale.US, "%,d", steps)
+}
+
+internal fun formatHeaderDate(dateString: String): String {
+  return try {
+    val inFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    val outFmt = SimpleDateFormat("EEE, d MMM", Locale.getDefault())
+    val parsed = inFmt.parse(dateString)
+    if (parsed != null) outFmt.format(parsed) else outFmt.format(Date())
+  } catch (_: Exception) {
+    SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date())
+  }
+}
+
+internal fun formatLitresOrMl(ml: Int): String {
+  return if (ml >= 1000) {
+    String.format(Locale.US, "%.1f L", ml / 1000f)
+  } else {
+    "$ml ml"
+  }
+}
+
+internal fun formatSleepDuration(minutes: Int?): String {
+  if (minutes == null || minutes <= 0) return "—"
+  val h = minutes / 60
+  val m = minutes % 60
+  return if (m == 0) "${h}h" else "${h}h ${m}m"
+}
+
+// ============================================================================
+// TodayScreen (Step 2: Calm Header + Hero Ring + Breakdown Sheet + Base Sheet)
+// ============================================================================
 
 @Composable
 fun TodayScreen(
@@ -150,180 +349,411 @@ fun TodayScreen(
 ) {
   val context = LocalContext.current
   val lifecycleOwner = LocalLifecycleOwner.current
+  val haptic = LocalHapticFeedback.current
+  val colors = MaterialTheme.kinetiqColors
+  val listState = rememberLazyListState()
 
-  var showAddWaterDialog by remember { mutableStateOf(false) }
+  val reduceMotion = rememberReduceMotionEnabled()
+
+  var showBreakdownSheet by remember { mutableStateOf(false) }
+  var showLogSheet by remember { mutableStateOf(false) }
+  var showWaterLogsSheet by remember { mutableStateOf(false) }
+  var showCustomWaterDialog by remember { mutableStateOf(false) }
+  var showCustomStepsDialog by remember { mutableStateOf(false) }
   var showLogSleepDialog by remember { mutableStateOf(false) }
   var showAddHabitDialog by remember { mutableStateOf(false) }
-  var showWaterLogsExpanded by remember { mutableStateOf(false) }
-  var permissionDeniedOnce by remember { mutableStateOf(false) }
+  var isBreathingActive by remember { mutableStateOf(false) }
+  var dismissedReminderIds by remember { mutableStateOf(setOf<String>()) }
+
+  val isScrolledDown by remember {
+    derivedStateOf {
+      listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 72
+    }
+  }
 
   val stepPermissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestMultiplePermissions()
   ) {
     viewModel.onStepPermissionsResult()
-    if (!StepPermissionHelper.hasActivityRecognitionPermission(context)) {
-      permissionDeniedOnce = true
-    } else {
-      permissionDeniedOnce = false
-    }
   }
 
   DisposableEffect(lifecycleOwner) {
     val observer = LifecycleEventObserver { _, event ->
       if (event == Lifecycle.Event.ON_RESUME) {
         viewModel.refreshStepTrackerState(autoStartIfPermitted = true)
-        if (StepPermissionHelper.hasActivityRecognitionPermission(context)) {
-          permissionDeniedOnce = false
-        }
+      } else if (event == Lifecycle.Event.ON_STOP) {
+        isBreathingActive = false
       }
     }
     lifecycleOwner.lifecycle.addObserver(observer)
     onDispose {
+      isBreathingActive = false
       lifecycleOwner.lifecycle.removeObserver(observer)
     }
   }
 
-  val targetSteps = uiState.userProfile.targetSteps
-  val currentSteps = uiState.todayActivity?.stepCount ?: 0
-  val stepProgress = (currentSteps.toFloat() / targetSteps).coerceIn(0f, 1f)
-
-  val targetWater = uiState.userProfile.targetWaterMl
-  val currentWater = uiState.todayWaterTotalMl
-  val waterProgress = (currentWater.toFloat() / targetWater).coerceIn(0f, 1f)
-
-  val targetSleepHours = uiState.userProfile.targetSleepHours
-  val recordedSleepMinutes = uiState.todaySleep?.durationMinutes ?: 0
-  val sleepProgress = ((recordedSleepMinutes / 60f) / targetSleepHours).coerceIn(0f, 1f)
-
+  val targetSteps = uiState.userProfile.targetSteps.coerceAtLeast(1)
+  val targetWater = uiState.userProfile.targetWaterMl.coerceAtLeast(1)
+  val targetSleepHours = uiState.userProfile.targetSleepHours.coerceAtLeast(1f)
   val totalHabits = uiState.activeHabits.size
-  val completedHabits = uiState.todayHabitLogs.size
+
+  val currentSteps = uiState.todayActivity?.stepCount ?: 0
+  val isRestDay = uiState.todayActivity?.isRestDay ?: false
+  val currentWaterMl = uiState.todayWaterTotalMl
+  val sleepMinutes = uiState.todaySleep?.durationMinutes ?: 0
+  val completedHabitIds = remember(uiState.todayHabitLogs) {
+    uiState.todayHabitLogs.map { it.habitId }.toSet()
+  }
+  val completedHabits = uiState.activeHabits.count { completedHabitIds.contains(it.id) }
+
+  val stepProgress = (currentSteps.toFloat() / targetSteps).coerceIn(0f, 1f)
+  val waterProgress = (currentWaterMl.toFloat() / targetWater).coerceIn(0f, 1f)
+  val sleepProgress = ((sleepMinutes / 60f) / targetSleepHours).coerceIn(0f, 1f)
   val habitProgress = if (totalHabits > 0) (completedHabits.toFloat() / totalHabits).coerceIn(0f, 1f) else 0f
 
-  LazyColumn(
-    modifier = modifier
-      .fillMaxSize()
-      .padding(horizontal = 16.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp)
+  val stripItems = remember(
+    uiState.pastWeekDates,
+    uiState.todayDate,
+    targetSteps,
+    targetWater,
+    targetSleepHours,
+    totalHabits,
+    currentSteps,
+    currentWaterMl,
+    sleepMinutes,
+    uiState.todayHabitLogs,
+    uiState.pastWeekActivities,
+    uiState.pastWeekHydration,
+    uiState.pastWeekSleep,
+    uiState.pastWeekHabitLogs
   ) {
-    item {
-      // 1. Holistic 4-Pillar Equilibrium Ring (with animated sweep & breathing pulse)
-      HolisticWellnessRing(
-        stepProgress = stepProgress,
-        waterProgress = waterProgress,
-        sleepProgress = sleepProgress,
-        habitProgress = habitProgress
-      )
-    }
-
-    item {
-      // 2. Interactive Vagus Nerve Respiration (Box Breathing)
-      InteractiveBreathingCard()
-    }
-
-    item {
-      // 3. Real-Time Movement & Step Counter Card
-      ActivityPillarCard(
-        currentSteps = currentSteps,
-        targetSteps = targetSteps,
-        activeMinutes = uiState.todayActivity?.activeMinutes ?: 0,
-        distanceKm = uiState.todayActivity?.distanceKm ?: 0f,
-        calories = uiState.todayActivity?.caloriesEstimated ?: 0,
-        isRestDay = uiState.todayActivity?.isRestDay ?: false,
-        pastWeekDates = uiState.pastWeekDates,
-        pastWeekActivities = uiState.pastWeekActivities,
-        todayDate = uiState.todayDate,
-        stepTrackerStatus = uiState.stepTrackerStatus,
-        showSettingsShortcut = permissionDeniedOnce,
-        onEnableTracking = {
-          val perms = StepPermissionHelper.requiredRuntimePermissions()
-          if (perms.isNotEmpty()) {
-            stepPermissionLauncher.launch(perms)
-          } else {
-            viewModel.startStepTracking()
-          }
-        },
-        onTogglePauseTracking = {
-          if (uiState.stepTrackerStatus == StepTrackerStatus.ACTIVE) {
-            viewModel.pauseStepTracking()
-          } else {
-            viewModel.startStepTracking()
-          }
-        },
-        onOpenAppSettings = {
-          val intent = Intent(
-            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-            Uri.fromParts("package", context.packageName, null)
-          )
-          context.startActivity(intent)
-        },
-        onToggleRestDay = { viewModel.setRestDay(!(uiState.todayActivity?.isRestDay ?: false)) }
-      )
-    }
-
-    item {
-      // 4. Bio-Hydration Tracker Card
-      HydrationPillarCard(
-        currentWaterMl = currentWater,
-        targetWaterMl = targetWater,
-        logs = uiState.todayWaterLogs,
-        isExpanded = showWaterLogsExpanded,
-        onToggleExpand = { showWaterLogsExpanded = !showWaterLogsExpanded },
-        onQuickAddWater = { amount, type -> viewModel.logWater(amount, type) },
-        onOpenCustomDialog = { showAddWaterDialog = true },
-        onDeleteLog = { viewModel.deleteWaterLog(it) }
-      )
-    }
-
-    item {
-      // 5. Circadian Sleep Restoration Card
-      SleepPillarCard(
-        sleepRecord = uiState.todaySleep,
-        targetHours = targetSleepHours,
-        onOpenLogSleepDialog = { showLogSleepDialog = true }
-      )
-    }
-
-    item {
-      // 6. Habit Stack Rituals Card
-      HabitsPillarCard(
-        habits = uiState.activeHabits,
-        completedHabitIds = uiState.todayHabitLogs.map { it.habitId }.toSet(),
-        onToggleHabit = { viewModel.toggleHabit(it) },
-        onOpenAddHabitDialog = { showAddHabitDialog = true },
-        onDeleteHabit = { viewModel.deleteHabit(it) }
-      )
-    }
-
-    item {
-      // 7. Gentle Daytime Telemetry Cues
-      GentleRemindersCard(
-        waterRemainingMl = (targetWater - currentWater).coerceAtLeast(0),
-        stepsRemaining = (targetSteps - currentSteps).coerceAtLeast(0)
-      )
-    }
-
-    item {
-      // 8. Medical Safety Disclaimer
-      MedicalDisclaimerBanner()
-      Spacer(modifier = Modifier.height(20.dp))
-    }
+    buildSevenDayStrip(
+      pastWeekDates = uiState.pastWeekDates,
+      todayDate = uiState.todayDate,
+      targetSteps = targetSteps,
+      targetWaterMl = targetWater,
+      targetSleepHours = targetSleepHours,
+      totalHabits = totalHabits,
+      todaySteps = currentSteps,
+      todayWaterMl = currentWaterMl,
+      todaySleepMinutes = sleepMinutes,
+      todayHabitCount = uiState.todayHabitLogs.size,
+      pastWeekActivities = uiState.pastWeekActivities,
+      pastWeekHydration = uiState.pastWeekHydration,
+      pastWeekSleep = uiState.pastWeekSleep,
+      pastWeekHabitLogs = uiState.pastWeekHabitLogs
+    )
   }
 
-  // Dialogs
-  if (showAddWaterDialog) {
-    AddWaterCustomDialog(
-      onDismiss = { showAddWaterDialog = false },
-      onConfirm = { amountMl, type ->
-        viewModel.logWater(amountMl, type)
-        showAddWaterDialog = false
+  val waterRemaining = (targetWater - currentWaterMl).coerceAtLeast(0)
+  val stepsRemaining = (targetSteps - currentSteps).coerceAtLeast(0)
+
+  val balanceSummary = remember(
+    stepProgress,
+    waterProgress,
+    sleepProgress,
+    habitProgress,
+    isRestDay,
+    waterRemaining,
+    stepsRemaining,
+    sleepMinutes,
+    stripItems
+  ) {
+    computeTodayReadiness(
+      stepProgress = stepProgress,
+      waterProgress = waterProgress,
+      sleepProgress = sleepProgress,
+      habitProgress = habitProgress,
+      isRestDay = isRestDay,
+      waterRemainingMl = waterRemaining,
+      stepsRemaining = stepsRemaining,
+      sleepMinutes = sleepMinutes,
+      stripItems = stripItems
+    )
+  }
+
+  val headerDate = remember(uiState.todayDate) { formatHeaderDate(uiState.todayDate) }
+
+  Box(
+    modifier = modifier
+      .fillMaxSize()
+      .background(colors.background),
+    contentAlignment = Alignment.TopCenter
+  ) {
+    LazyColumn(
+      state = listState,
+      modifier = Modifier
+        .fillMaxWidth()
+        .widthIn(max = 680.dp),
+      contentPadding = PaddingValues(bottom = 96.dp)
+    ) {
+      // 1. Calm Header: "Today" + date, Streak chip on right
+      item(key = "today_header") {
+        TodayCalmHeader(
+          dateLabel = headerDate,
+          streakDays = balanceSummary.streakDays,
+          modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        )
+      }
+
+      // 2. Hero: 4-Segment Daily Balance Ring (0-100) + Single Human Insight Sentence
+      item(key = "today_hero") {
+        TodayBalanceHero(
+          score = balanceSummary.scorePercent,
+          insightSentence = balanceSummary.coachingInsight,
+          stepProgress = stepProgress,
+          waterProgress = waterProgress,
+          sleepProgress = sleepProgress,
+          habitProgress = habitProgress,
+          reduceMotion = reduceMotion,
+          onRingClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            showBreakdownSheet = true
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(-1f)
+            .graphicsLayer {
+              if (!reduceMotion && listState.firstVisibleItemIndex <= 1) {
+                val offsetPx = if (listState.firstVisibleItemIndex == 0) {
+                  listState.firstVisibleItemScrollOffset.toFloat() * 0.25f
+                } else {
+                  listState.firstVisibleItemScrollOffset.toFloat() * 0.35f + 24f
+                }
+                translationY = offsetPx
+                alpha = (1f - (offsetPx / 420f)).coerceIn(0.25f, 1f)
+              }
+            }
+            .padding(horizontal = 20.dp)
+            .padding(top = 4.dp, bottom = 24.dp)
+        )
+      }
+
+      // 3. Layered Surface-1 Rounded Sheet (28dp top corners) scrolling up over the hero
+      item(key = "today_sheet_container") {
+        Surface(
+          shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+          color = colors.surface1,
+          modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(1f)
+            .heightIn(min = 520.dp)
+        ) {
+          Column(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp)
+          ) {
+            // 4. Asymmetric Progress Bento
+            CalmSectionReveal(index = 0, reduceMotion = reduceMotion) {
+              AsymmetricPillarsBento(
+                currentWaterMl = currentWaterMl,
+                targetWaterMl = targetWater,
+                waterProgress = waterProgress,
+                currentSteps = currentSteps,
+                targetSteps = targetSteps,
+                stepProgress = stepProgress,
+                hasActivityRecord = uiState.todayActivity != null,
+                stepTrackerStatus = uiState.stepTrackerStatus,
+                sleepMinutes = uiState.todaySleep?.durationMinutes,
+                targetSleepHours = targetSleepHours,
+                sleepProgress = sleepProgress,
+                reduceMotion = reduceMotion,
+                onQuickAddWater = { amount, container ->
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  viewModel.logWater(amount, container)
+                },
+                onOpenWaterLogs = { showWaterLogsSheet = true },
+                onOpenCustomWater = {
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  showCustomWaterDialog = true
+                },
+                onStepsClick = {
+                  if (uiState.stepTrackerStatus == StepTrackerStatus.PERMISSION_REQUIRED) {
+                    val perms = StepPermissionHelper.requiredRuntimePermissions()
+                    if (perms.isNotEmpty()) stepPermissionLauncher.launch(perms)
+                    else showCustomStepsDialog = true
+                  } else {
+                    showCustomStepsDialog = true
+                  }
+                },
+                onSleepClick = { showLogSleepDialog = true }
+              )
+            }
+
+            // 5. Flat Habits Checklist (7-day dot strip + morphing check + haptic)
+            CalmSectionReveal(index = 1, reduceMotion = reduceMotion) {
+              FlatHabitsChecklist(
+                habits = uiState.activeHabits,
+                completedHabitIds = completedHabitIds,
+                pastWeekDates = uiState.pastWeekDates,
+                todayDate = uiState.todayDate,
+                pastWeekHabitLogs = uiState.pastWeekHabitLogs,
+                todayHabitLogs = uiState.todayHabitLogs,
+                reduceMotion = reduceMotion,
+                onToggleHabit = { habitId ->
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  viewModel.toggleHabit(habitId)
+                },
+                onDeleteHabit = { habitId ->
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  viewModel.deleteHabit(habitId)
+                }
+              )
+            }
+
+            // 6. Breathing: Collapsed one-row ("1-minute reset" + Start) -> expands inline 4s/6s
+            CalmSectionReveal(index = 2, reduceMotion = reduceMotion) {
+              OneMinuteResetBreathing(
+                isActive = isBreathingActive,
+                reduceMotion = reduceMotion,
+                onToggle = {
+                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                  isBreathingActive = !isBreathingActive
+                },
+                onComplete = {
+                  isBreathingActive = false
+                }
+              )
+            }
+
+            // 7. Gentle Reminders (slim dismissible rows, no header card)
+            val reminders = remember(waterRemaining, stepsRemaining, sleepMinutes, isRestDay, dismissedReminderIds, colors) {
+              buildGentleReminders(
+                colors = colors,
+                waterRemainingMl = waterRemaining,
+                stepsRemaining = stepsRemaining,
+                sleepMinutes = sleepMinutes,
+                isRestDay = isRestDay
+              ).filterNot { it.id in dismissedReminderIds }
+            }
+            if (reminders.isNotEmpty()) {
+              CalmSectionReveal(index = 3, reduceMotion = reduceMotion) {
+                GentleRemindersList(
+                  reminders = reminders,
+                  onDismissReminder = { id ->
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    dismissedReminderIds = dismissedReminderIds + id
+                  }
+                )
+              }
+            }
+
+            CalmSectionReveal(index = 4, reduceMotion = reduceMotion) {
+              MedicalDisclaimerBanner()
+            }
+          }
+        }
+      }
+    }
+
+    // 8. Extended FAB "Log" (bottom-end above nav, collapses on scroll)
+    ExtendedFloatingActionButton(
+      onClick = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        showLogSheet = true
+      },
+      expanded = !isScrolledDown,
+      icon = {
+        Icon(
+          imageVector = Icons.Default.Add,
+          contentDescription = "Log entry"
+        )
+      },
+      text = {
+        Text(
+          text = "Log",
+          style = MaterialTheme.typography.labelLarge
+        )
+      },
+      containerColor = MaterialTheme.colorScheme.primary,
+      contentColor = MaterialTheme.colorScheme.onPrimary,
+      modifier = Modifier
+        .align(Alignment.BottomEnd)
+        .padding(end = 20.dp, bottom = 16.dp)
+        .heightIn(min = 48.dp)
+        .testTag("today_log_fab")
+    )
+  }
+
+  if (showLogSheet) {
+    LogPickerBottomSheet(
+      onPickWater = {
+        showLogSheet = false
+        showCustomWaterDialog = true
+      },
+      onPickSteps = {
+        showLogSheet = false
+        if (uiState.stepTrackerStatus == StepTrackerStatus.PERMISSION_REQUIRED) {
+          val perms = StepPermissionHelper.requiredRuntimePermissions()
+          if (perms.isNotEmpty()) stepPermissionLauncher.launch(perms)
+          else showCustomStepsDialog = true
+        } else {
+          showCustomStepsDialog = true
+        }
+      },
+      onPickSleep = {
+        showLogSheet = false
+        showLogSleepDialog = true
+      },
+      onPickHabit = {
+        showLogSheet = false
+        showAddHabitDialog = true
+      },
+      onDismiss = { showLogSheet = false }
+    )
+  }
+
+  if (showWaterLogsSheet) {
+    WaterLogsModalSheet(
+      currentWaterMl = currentWaterMl,
+      targetWaterMl = targetWater,
+      waterLogs = uiState.todayWaterLogs,
+      onDeleteLog = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        viewModel.deleteWaterLog(it)
+      },
+      onAddCustom = {
+        showWaterLogsSheet = false
+        showCustomWaterDialog = true
+      },
+      onDismiss = { showWaterLogsSheet = false }
+    )
+  }
+
+  if (showCustomWaterDialog) {
+    CustomWaterInputDialog(
+      onDismiss = { showCustomWaterDialog = false },
+      onConfirm = { amountMl, container ->
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.logWater(amountMl, container)
+        showCustomWaterDialog = false
+      }
+    )
+  }
+
+  if (showCustomStepsDialog) {
+    CustomStepsInputDialog(
+      stepTrackerStatus = uiState.stepTrackerStatus,
+      onToggleSensor = {
+        if (uiState.stepTrackerStatus == StepTrackerStatus.ACTIVE) viewModel.pauseStepTracking()
+        else viewModel.startStepTracking()
+      },
+      onDismiss = { showCustomStepsDialog = false },
+      onConfirm = { steps ->
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.logSteps(steps)
+        showCustomStepsDialog = false
       }
     )
   }
 
   if (showLogSleepDialog) {
-    LogSleepDialog(
+    CalmSleepDialog(
       onDismiss = { showLogSleepDialog = false },
       onConfirm = { bedtime, wake, rating, notes ->
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         viewModel.logSleep(bedtime, wake, rating, notes)
         showLogSleepDialog = false
       }
@@ -331,728 +761,303 @@ fun TodayScreen(
   }
 
   if (showAddHabitDialog) {
-    AddHabitDialog(
+    CalmAddHabitDialog(
       onDismiss = { showAddHabitDialog = false },
-      onConfirm = { title, cat, icon ->
-        viewModel.addCustomHabit(title, cat, icon)
+      onConfirm = { title, category, icon ->
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.addCustomHabit(title, category, icon)
         showAddHabitDialog = false
       }
     )
   }
+
+  if (showBreakdownSheet) {
+    DailyBalanceBreakdownSheet(
+      score = balanceSummary.scorePercent,
+      isRestDay = isRestDay,
+      currentSteps = currentSteps,
+      targetSteps = targetSteps,
+      stepProgress = stepProgress,
+      currentWaterMl = currentWaterMl,
+      targetWaterMl = targetWater,
+      waterProgress = waterProgress,
+      sleepMinutes = sleepMinutes,
+      targetSleepHours = targetSleepHours,
+      sleepProgress = sleepProgress,
+      completedHabits = completedHabits,
+      totalHabits = totalHabits,
+      habitProgress = habitProgress,
+      stepTrackerStatus = uiState.stepTrackerStatus,
+      onToggleRestDay = {
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        viewModel.setRestDay(!isRestDay)
+      },
+      onToggleStepSensor = {
+        if (uiState.stepTrackerStatus == StepTrackerStatus.PERMISSION_REQUIRED) {
+          val perms = StepPermissionHelper.requiredRuntimePermissions()
+          if (perms.isNotEmpty()) stepPermissionLauncher.launch(perms)
+        } else if (uiState.stepTrackerStatus == StepTrackerStatus.ACTIVE) {
+          viewModel.pauseStepTracking()
+        } else {
+          viewModel.startStepTracking()
+        }
+      },
+      onOpenSettings = {
+        val intent = Intent(
+          Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+          Uri.fromParts("package", context.packageName, null)
+        )
+        context.startActivity(intent)
+      },
+      onDismiss = { showBreakdownSheet = false }
+    )
+  }
 }
 
-// ------------------- INTERACTIVE MINDFUL BREATHING CARD -------------------
-
 @Composable
-private fun InteractiveBreathingCard() {
-  var isPlaying by remember { mutableStateOf(false) }
-  var breathPhase by remember { mutableStateOf("Ready") }
-  var secondsInPhase by remember { mutableIntStateOf(0) }
-
-  LaunchedEffect(isPlaying) {
-    if (isPlaying) {
-      while (isPlaying) {
-        breathPhase = "Inhale slowly..."
-        for (sec in 4 downTo 1) {
-          secondsInPhase = sec
-          delay(1000)
-        }
-        breathPhase = "Hold gently..."
-        for (sec in 4 downTo 1) {
-          secondsInPhase = sec
-          delay(1000)
-        }
-        breathPhase = "Exhale smoothly..."
-        for (sec in 4 downTo 1) {
-          secondsInPhase = sec
-          delay(1000)
-        }
-        breathPhase = "Rest empty..."
-        for (sec in 4 downTo 1) {
-          secondsInPhase = sec
-          delay(1000)
-        }
-      }
-    } else {
-      breathPhase = "4-4-4-4 Vagus Nerve Cadence"
-      secondsInPhase = 0
-    }
-  }
-
-  val infiniteTransition = rememberInfiniteTransition(label = "box_breath_anim")
-  val breathScale by infiniteTransition.animateFloat(
-    initialValue = if (isPlaying) 0.85f else 1.0f,
-    targetValue = if (isPlaying) 1.25f else 1.0f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(durationMillis = 4000, easing = FastOutSlowInEasing),
-      repeatMode = RepeatMode.Reverse
-    ),
-    label = "breath_scale"
-  )
-
-  Card(
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(KinetiqPurpleNeon.copy(alpha = 0.35f), Color.Transparent)
-        ),
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+private fun TodayCalmHeader(
+  dateLabel: String,
+  streakDays: Int,
+  modifier: Modifier = Modifier
+) {
+  val colors = MaterialTheme.kinetiqColors
+  Row(
+    modifier = modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Row(
+    Column {
+      Text(
+        text = "Today",
+        style = MaterialTheme.typography.titleLarge,
+        color = colors.textPrimary,
+        modifier = Modifier.testTag("today_greeting_title")
+      )
+      Text(
+        text = dateLabel,
+        style = MaterialTheme.typography.labelMedium,
+        color = colors.textSecondary
+      )
+    }
+
+    Surface(
+      shape = RoundedCornerShape(50),
+      color = colors.surface2,
       modifier = Modifier
-        .fillMaxWidth()
-        .padding(18.dp),
-      verticalAlignment = Alignment.CenterVertically,
-      horizontalArrangement = Arrangement.SpaceBetween
+        .heightIn(min = 36.dp)
+        .semantics { contentDescription = "Current streak, $streakDays days" }
+        .testTag("today_streak_badge")
     ) {
       Row(
-        modifier = Modifier.weight(1f),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Box(
-          contentAlignment = Alignment.Center,
-          modifier = Modifier.size(54.dp)
-        ) {
-          Box(
-            modifier = Modifier
-              .size(48.dp)
-              .scale(breathScale)
-              .background(
-                color = KinetiqPurpleNeon.copy(alpha = if (isPlaying) 0.35f else 0.12f),
-                shape = CircleShape
-              )
-          )
-          Icon(
-            imageVector = Icons.Default.Spa,
-            contentDescription = null,
-            tint = KinetiqPurpleNeon,
-            modifier = Modifier.size(24.dp)
-          )
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column {
-          Text(
-            text = "RESONANCE BREATHING",
-            style = MaterialTheme.typography.labelSmall.copy(
-              fontWeight = FontWeight.Bold,
-              letterSpacing = 1.2.sp,
-              fontSize = 9.sp
-            ),
-            color = KinetiqPurpleNeon
-          )
-          Text(
-            text = if (isPlaying) "$breathPhase ($secondsInPhase s)" else breathPhase,
-            style = MaterialTheme.typography.bodyMedium.copy(
-              fontWeight = FontWeight.SemiBold,
-              color = KinetiqTextWhite
-            )
-          )
-        }
-      }
-
-      IconButton(
-        onClick = { isPlaying = !isPlaying },
-        modifier = Modifier
-          .size(44.dp)
-          .background(
-            brush = Brush.linearGradient(
-              colors = listOf(KinetiqPurpleNeon, KinetiqPurplePrimary)
-            ),
-            shape = CircleShape
-          )
-          .bounceClick { isPlaying = !isPlaying }
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
       ) {
         Icon(
-          imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-          contentDescription = if (isPlaying) "Pause breathing" else "Start breathing",
-          tint = KinetiqBlack,
-          modifier = Modifier.size(22.dp)
+          imageVector = Icons.Default.LocalFireDepartment,
+          contentDescription = null,
+          tint = colors.habits,
+          modifier = Modifier.size(16.dp)
+        )
+        Text(
+          text = "$streakDays",
+          style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+          color = colors.textPrimary
         )
       }
     }
   }
 }
 
-// ------------------- PILLAR CARDS -------------------
-
 @Composable
-private fun ActivityPillarCard(
-  currentSteps: Int,
-  targetSteps: Int,
-  activeMinutes: Int,
-  distanceKm: Float,
-  calories: Int,
-  isRestDay: Boolean,
-  pastWeekDates: List<String>,
-  pastWeekActivities: List<ActivityRecord>,
-  todayDate: String,
-  stepTrackerStatus: StepTrackerStatus,
-  showSettingsShortcut: Boolean,
-  onEnableTracking: () -> Unit,
-  onTogglePauseTracking: () -> Unit,
-  onOpenAppSettings: () -> Unit,
-  onToggleRestDay: () -> Unit
+private fun TodayBalanceHero(
+  score: Int,
+  insightSentence: String,
+  stepProgress: Float,
+  waterProgress: Float,
+  sleepProgress: Float,
+  habitProgress: Float,
+  reduceMotion: Boolean,
+  onRingClick: () -> Unit,
+  modifier: Modifier = Modifier
 ) {
-  val safeTarget = targetSteps.coerceAtLeast(1)
-  val animatedSteps by animateIntAsState(
-    targetValue = currentSteps,
-    animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
-    label = "anim_live_step_count"
-  )
-  val animProgress by animateFloatAsState(
-    targetValue = (currentSteps.toFloat() / safeTarget).coerceIn(0f, 1f),
-    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-    label = "anim_activity_progress"
+  val colors = MaterialTheme.kinetiqColors
+  val interactionSource = remember { MutableInteractionSource() }
+  val isPressed by interactionSource.collectIsPressedAsState()
+  val pressScale by animateFloatAsState(
+    targetValue = if (isPressed && !reduceMotion) 0.97f else 1f,
+    animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f),
+    label = "hero_press_scale"
   )
 
-  val livePulseTransition = rememberInfiniteTransition(label = "live_step_pulse")
-  val livePulseAlpha by livePulseTransition.animateFloat(
-    initialValue = 0.4f,
-    targetValue = 1f,
-    animationSpec = infiniteRepeatable(
-      animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-      repeatMode = RepeatMode.Reverse
-    ),
-    label = "live_dot_alpha"
+  // Sweep once on mount (900ms), subsequent updates spring cleanly (damping 0.8)
+  val mountSweep = remember { Animatable(if (reduceMotion) 1f else 0f) }
+  LaunchedEffect(reduceMotion) {
+    if (reduceMotion) {
+      mountSweep.snapTo(1f)
+    } else {
+      mountSweep.animateTo(
+        targetValue = 1f,
+        animationSpec = tween(durationMillis = 900, easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f))
+      )
+    }
+  }
+
+  val animSteps by animateFloatAsState(
+    targetValue = stepProgress.coerceIn(0f, 1f),
+    animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+    label = "hero_steps"
+  )
+  val animWater by animateFloatAsState(
+    targetValue = waterProgress.coerceIn(0f, 1f),
+    animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+    label = "hero_water"
+  )
+  val animSleep by animateFloatAsState(
+    targetValue = sleepProgress.coerceIn(0f, 1f),
+    animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+    label = "hero_sleep"
+  )
+  val animHabits by animateFloatAsState(
+    targetValue = habitProgress.coerceIn(0f, 1f),
+    animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+    label = "hero_habits"
   )
 
-  Card(
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = KinetiqBorderSubtle,
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+  val displayScore = (score * mountSweep.value).roundToInt()
+
+  val ringDescription =
+    "Daily balance, $score out of 100. Steps ${(stepProgress * 100).roundToInt()} percent, " +
+      "Water ${(waterProgress * 100).roundToInt()} percent, Sleep ${(sleepProgress * 100).roundToInt()} percent, " +
+      "Habits ${(habitProgress * 100).roundToInt()} percent. Double tap for breakdown."
+
+  val fontScale = LocalDensity.current.fontScale
+  val ringDiameter = remember(fontScale) {
+    val extra = (fontScale - 1f).coerceAtLeast(0f) * 0.45f
+    (228.dp * (1f + extra)).coerceAtMost(320.dp)
+  }
+
+  Column(
+    modifier = modifier,
+    horizontalAlignment = Alignment.CenterHorizontally
   ) {
-    Column(modifier = Modifier.padding(20.dp)) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(
-          modifier = Modifier.weight(1f),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Box(
-            modifier = Modifier
-              .size(42.dp)
-              .background(KineticViolet.copy(alpha = 0.15f), CircleShape),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.DirectionsWalk,
-              contentDescription = null,
-              tint = KineticViolet
-            )
-          }
-          Spacer(modifier = Modifier.width(12.dp))
-          Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                text = "REAL-TIME STEPS",
-                style = MaterialTheme.typography.labelSmall.copy(
-                  fontWeight = FontWeight.Bold,
-                  letterSpacing = 1.2.sp,
-                  fontSize = 10.sp
-                ),
-                color = KineticViolet
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              val (badgeLabel, badgeColor) = when (stepTrackerStatus) {
-                StepTrackerStatus.ACTIVE -> "LIVE" to Color(0xFF22C55E)
-                StepTrackerStatus.PAUSED -> "PAUSED" to RadiantAmber
-                StepTrackerStatus.PERMISSION_REQUIRED -> "SETUP" to KineticViolet
-                StepTrackerStatus.SENSOR_UNAVAILABLE -> "NO SENSOR" to KinetiqTextMuted
-              }
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = badgeColor.copy(alpha = 0.16f),
-                border = androidx.compose.foundation.BorderStroke(0.8.dp, badgeColor.copy(alpha = 0.45f)),
-                modifier = Modifier.testTag("step_status_badge")
-              ) {
-                Row(
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                  verticalAlignment = Alignment.CenterVertically
-                ) {
-                  if (stepTrackerStatus == StepTrackerStatus.ACTIVE) {
-                    Box(
-                      modifier = Modifier
-                        .size(6.dp)
-                        .background(badgeColor.copy(alpha = livePulseAlpha), CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                  }
-                  Text(
-                    text = badgeLabel,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                      fontSize = 9.sp,
-                      fontWeight = FontWeight.Bold,
-                      letterSpacing = 0.6.sp
-                    ),
-                    color = badgeColor
-                  )
-                }
-              }
-            }
-
-            Text(
-              text = if (isRestDay) "Active Recovery Day" else "Target: $targetSteps steps",
-              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextWhite
-            )
-          }
-        }
-
-        FilterChip(
-          selected = isRestDay,
-          onClick = onToggleRestDay,
-          label = { Text("Rest Day", fontSize = 11.sp, color = if (isRestDay) KinetiqBlack else KinetiqTextMuted) },
-          colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = KineticViolet,
-            containerColor = KinetiqObsidianSurface
-          ),
-          border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (isRestDay) KineticViolet else KinetiqBorderSubtle
-          ),
-          modifier = Modifier.bounceClick(scaleDown = 0.92f) { onToggleRestDay() }
+    Box(
+      contentAlignment = Alignment.Center,
+      modifier = Modifier
+        .size(ringDiameter)
+        .scale(pressScale)
+        .clip(CircleShape)
+        .clickable(
+          interactionSource = interactionSource,
+          indication = null,
+          onClick = onRingClick
         )
-      }
+        .semantics { contentDescription = ringDescription }
+        .testTag("hero_readiness_card")
+    ) {
+      Canvas(modifier = Modifier.fillMaxSize().padding(10.dp)) {
+        val strokePx = 10.dp.toPx()
+        val gapDegrees = 10f
+        val segmentArc = 90f - gapDegrees // 80 degrees per pillar
+        val sweepFactor = mountSweep.value
 
-      Spacer(modifier = Modifier.height(16.dp))
+        val segments = listOf(
+          Triple(-85f, colors.steps, animSteps),
+          Triple(5f, colors.water, animWater),
+          Triple(95f, colors.sleep, animSleep),
+          Triple(185f, colors.habits, animHabits)
+        )
 
-      val goalReached = currentSteps >= safeTarget
-      val ringAccent = if (goalReached) Color(0xFF22C55E) else KineticViolet
-      val progressPct = (animProgress * 100f).toInt().coerceIn(0, 100)
-      val remainingSteps = (safeTarget - currentSteps).coerceAtLeast(0)
-
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Circular Progress Indicator wrapping current step count
-        Box(
-          contentAlignment = Alignment.Center,
-          modifier = Modifier
-            .size(124.dp)
-            .testTag("step_circular_progress")
-        ) {
-          Canvas(
-            modifier = Modifier
-              .fillMaxSize()
-              .padding(6.dp)
-          ) {
-            val strokePx = 10.dp.toPx()
-            val radius = (size.minDimension - strokePx) / 2f
-            drawCircle(
-              color = KineticViolet.copy(alpha = 0.16f),
-              radius = radius,
-              style = Stroke(width = strokePx)
-            )
+        segments.forEach { (startAngle, pillarColor, progress) ->
+          drawArc(
+            color = pillarColor.copy(alpha = 0.12f),
+            startAngle = startAngle,
+            sweepAngle = segmentArc,
+            useCenter = false,
+            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+          )
+          val activeSweep = segmentArc * progress * sweepFactor
+          if (activeSweep > 0.5f) {
             drawArc(
-              brush = Brush.linearGradient(
-                colors = if (goalReached) {
-                  listOf(Color(0xFF22C55E), Color(0xFF4ADE80))
-                } else {
-                  listOf(KineticViolet, KinetiqPurpleNeon)
-                }
-              ),
-              startAngle = -90f,
-              sweepAngle = animProgress * 360f,
+              color = pillarColor,
+              startAngle = startAngle,
+              sweepAngle = activeSweep,
               useCenter = false,
               style = Stroke(width = strokePx, cap = StrokeCap.Round)
             )
           }
-
-          Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-              text = "$animatedSteps",
-              style = MaterialTheme.typography.headlineSmall.copy(
-                fontWeight = FontWeight.Black,
-                fontSize = 24.sp,
-                letterSpacing = (-0.5).sp
-              ),
-              maxLines = 1,
-              color = ringAccent,
-              modifier = Modifier.testTag("today_step_count_text")
-            )
-            Text(
-              text = "STEPS",
-              style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 9.5.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.9.sp
-              ),
-              color = KinetiqTextMuted
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(
-          modifier = Modifier.weight(1f),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          Column {
-            Text(
-              text = if (goalReached) "Daily Target Reached!" else "$progressPct% of daily goal",
-              style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-              color = if (goalReached) Color(0xFF22C55E) else KinetiqTextWhite
-            )
-            Text(
-              text = if (goalReached) {
-                "$safeTarget daily steps completed"
-              } else {
-                "$remainingSteps steps remaining"
-              },
-              style = MaterialTheme.typography.labelSmall,
-              color = KinetiqTextMuted
-            )
-          }
-
-          Surface(
-            color = KinetiqObsidianSurface,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(0.8.dp, KinetiqBorderSubtle),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
-              horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-              StatMiniMetric("${String.format(Locale.US, "%.1f", distanceKm)} km", "Distance")
-              StatMiniMetric("$activeMinutes min", "Active")
-              StatMiniMetric("$calories kcal", "Energy")
-            }
-          }
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
-
-      // 7-Day Weekly Step History Line Chart
-      WeeklyStepLineChart(
-        pastWeekDates = pastWeekDates,
-        pastWeekActivities = pastWeekActivities,
-        todayDate = todayDate,
-        currentSteps = currentSteps,
-        targetSteps = safeTarget
-      )
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      // Live Hardware Step Sensor Controls & Status Strip
-      when (stepTrackerStatus) {
-        StepTrackerStatus.ACTIVE -> {
-          Surface(
-            color = KinetiqObsidianSurface,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Sensors,
-                  contentDescription = null,
-                  tint = Color(0xFF22C55E),
-                  modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                  text = "Counting steps continuously in background",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = KinetiqTextMuted
-                )
-              }
-
-              Spacer(modifier = Modifier.width(8.dp))
-
-              OutlinedButton(
-                onClick = onTogglePauseTracking,
-                modifier = Modifier
-                  .heightIn(min = 48.dp)
-                  .testTag("step_tracking_toggle_button")
-                  .bounceClick { onTogglePauseTracking() },
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = KinetiqTextWhite)
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Pause,
-                  contentDescription = "Pause step tracking",
-                  modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Pause", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-              }
-            }
-          }
-        }
-
-        StepTrackerStatus.PAUSED -> {
-          Surface(
-            color = KinetiqObsidianSurface,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                  text = "Step tracking paused",
-                  style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                  color = KinetiqTextWhite
-                )
-                Text(
-                  text = "Resume to track steps live",
-                  style = MaterialTheme.typography.labelSmall,
-                  color = KinetiqTextMuted
-                )
-              }
-
-              Spacer(modifier = Modifier.width(8.dp))
-
-              Button(
-                onClick = onTogglePauseTracking,
-                modifier = Modifier
-                  .heightIn(min = 48.dp)
-                  .testTag("step_tracking_toggle_button")
-                  .bounceClick { onTogglePauseTracking() },
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                  containerColor = KineticViolet,
-                  contentColor = KinetiqBlack
-                )
-              ) {
-                Icon(
-                  imageVector = Icons.Default.PlayArrow,
-                  contentDescription = "Resume step tracking",
-                  modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Resume", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-              }
-            }
-          }
-        }
-
-        StepTrackerStatus.PERMISSION_REQUIRED -> {
-          Surface(
-            color = KineticViolet.copy(alpha = 0.08f),
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, KineticViolet.copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Column(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-            ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                  imageVector = Icons.Default.Sensors,
-                  contentDescription = null,
-                  tint = KineticViolet,
-                  modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                  text = "Allow Physical Activity access to track your daily steps automatically in real time.",
-                  style = MaterialTheme.typography.bodySmall,
-                  color = KinetiqTextWhite
-                )
-              }
-
-              Spacer(modifier = Modifier.height(10.dp))
-
-              Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-              ) {
-                Button(
-                  onClick = onEnableTracking,
-                  modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp)
-                    .testTag("enable_step_tracking_button")
-                    .bounceClick { onEnableTracking() },
-                  shape = RoundedCornerShape(12.dp),
-                  colors = ButtonDefaults.buttonColors(
-                    containerColor = KineticViolet,
-                    contentColor = KinetiqBlack
-                  )
-                ) {
-                  Text("Enable Live Tracking", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                if (showSettingsShortcut) {
-                  OutlinedButton(
-                    onClick = onOpenAppSettings,
-                    modifier = Modifier
-                      .heightIn(min = 48.dp)
-                      .testTag("open_step_settings_button")
-                      .bounceClick { onOpenAppSettings() },
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = KinetiqTextWhite)
-                  ) {
-                    Text("Settings", fontSize = 12.sp)
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        StepTrackerStatus.SENSOR_UNAVAILABLE -> {
-          Surface(
-            color = KinetiqObsidianSurface,
-            shape = RoundedCornerShape(14.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-            modifier = Modifier
-              .fillMaxWidth()
-              .testTag("step_sensor_unavailable_notice")
-          ) {
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Default.SensorsOff,
-                contentDescription = "Step sensor unavailable",
-                tint = KinetiqTextMuted,
-                modifier = Modifier.size(20.dp)
-              )
-              Spacer(modifier = Modifier.width(10.dp))
-              Text(
-                text = "Hardware step sensor unavailable on this device or emulator. Real-time step tracking requires a built-in step counter sensor.",
-                style = MaterialTheme.typography.bodySmall,
-                color = KinetiqTextMuted
-              )
-            }
-          }
-        }
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(horizontal = 24.dp)
+      ) {
+        Text(
+          text = "Daily balance",
+          style = MaterialTheme.typography.labelMedium,
+          color = colors.textSecondary
+        )
+        Text(
+          text = "$displayScore",
+          style = KinetiqHeroScoreStyle,
+          color = colors.textPrimary,
+          maxLines = 1
+        )
       }
     }
-  }
-}
 
-internal data class DailyStepPoint(
-  val date: String,
-  val dayLabel: String,
-  val steps: Int,
-  val isToday: Boolean
-)
+    Spacer(modifier = Modifier.height(14.dp))
 
-internal fun buildWeeklyStepPoints(
-  pastWeekDates: List<String>,
-  pastWeekActivities: List<ActivityRecord>,
-  todayDate: String,
-  currentSteps: Int
-): List<DailyStepPoint> {
-  val datesToPlot = if (pastWeekDates.isNotEmpty()) pastWeekDates else listOf(todayDate)
-  val activityMap = pastWeekActivities.associateBy { it.date }
-  val inSdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-  val outSdf = SimpleDateFormat("EEE", Locale.US)
-
-  return datesToPlot.map { date ->
-    val isToday = date == todayDate
-    val recorded = activityMap[date]?.stepCount ?: 0
-    val steps = if (isToday) maxOf(recorded, currentSteps) else recorded
-    val parsed = runCatching { inSdf.parse(date) }.getOrNull()
-    val shortDay = parsed?.let { outSdf.format(it) } ?: date.takeLast(2)
-    DailyStepPoint(
-      date = date,
-      dayLabel = if (isToday) "Today" else shortDay,
-      steps = steps.coerceAtLeast(0),
-      isToday = isToday
+    Text(
+      text = insightSentence,
+      style = MaterialTheme.typography.bodyMedium,
+      color = colors.textSecondary,
+      textAlign = TextAlign.Center,
+      modifier = Modifier
+        .widthIn(max = 320.dp)
+        .padding(horizontal = 8.dp)
     )
   }
 }
 
 @Composable
-private fun WeeklyStepLineChart(
-  pastWeekDates: List<String>,
-  pastWeekActivities: List<ActivityRecord>,
-  todayDate: String,
+private fun DailyBalanceBreakdownSheet(
+  score: Int,
+  isRestDay: Boolean,
   currentSteps: Int,
-  targetSteps: Int
+  targetSteps: Int,
+  stepProgress: Float,
+  currentWaterMl: Int,
+  targetWaterMl: Int,
+  waterProgress: Float,
+  sleepMinutes: Int,
+  targetSleepHours: Float,
+  sleepProgress: Float,
+  completedHabits: Int,
+  totalHabits: Int,
+  habitProgress: Float,
+  stepTrackerStatus: StepTrackerStatus,
+  onToggleRestDay: () -> Unit,
+  onToggleStepSensor: () -> Unit,
+  onOpenSettings: () -> Unit,
+  onDismiss: () -> Unit
 ) {
-  val points = remember(pastWeekDates, pastWeekActivities, todayDate, currentSteps) {
-    buildWeeklyStepPoints(
-      pastWeekDates = pastWeekDates,
-      pastWeekActivities = pastWeekActivities,
-      todayDate = todayDate,
-      currentSteps = currentSteps
-    )
-  }
-  val haptic = LocalHapticFeedback.current
-  var selectedIndex by remember(points.size) {
-    mutableIntStateOf((points.size - 1).coerceAtLeast(0))
-  }
-  val safeSelectedIndex = selectedIndex.coerceIn(0, (points.size - 1).coerceAtLeast(0))
-  val selectedPoint = points.getOrNull(safeSelectedIndex)
+  val colors = MaterialTheme.kinetiqColors
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  var chartVisible by remember { mutableStateOf(false) }
-  LaunchedEffect(Unit) { chartVisible = true }
-  val animReveal by animateFloatAsState(
-    targetValue = if (chartVisible) 1f else 0f,
-    animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
-    label = "weekly_step_line_reveal"
-  )
-
-  val weeklyAverage = remember(points) {
-    if (points.isEmpty()) 0 else points.map { it.steps }.average().roundToInt()
-  }
-  val safeTarget = targetSteps.coerceAtLeast(1)
-  val maxObserved = points.maxOfOrNull { it.steps } ?: 0
-  val maxChartSteps = (maxOf(safeTarget, maxObserved, 1000) * 1.12f)
-  val emeraldColor = Color(0xFF22C55E)
-
-  Surface(
-    color = KinetiqObsidianSurface,
-    shape = RoundedCornerShape(16.dp),
-    border = androidx.compose.foundation.BorderStroke(0.8.dp, KinetiqBorderSubtle),
-    modifier = Modifier
-      .fillMaxWidth()
-      .testTag("weekly_step_line_chart")
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    sheetState = sheetState,
+    containerColor = colors.surface1,
+    contentColor = colors.textPrimary
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 14.dp, vertical = 12.dp)
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp),
+      verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1061,256 +1066,123 @@ private fun WeeklyStepLineChart(
       ) {
         Column {
           Text(
-            text = "7-DAY STEP TREND",
-            style = MaterialTheme.typography.labelSmall.copy(
-              fontWeight = FontWeight.Bold,
-              letterSpacing = 1.1.sp,
-              fontSize = 10.sp
-            ),
-            color = KinetiqPurpleNeon
+            text = "Daily balance breakdown",
+            style = MaterialTheme.typography.titleLarge,
+            color = colors.textPrimary
           )
           Text(
-            text = "Avg $weeklyAverage steps/day • Goal $safeTarget",
-            style = MaterialTheme.typography.labelSmall,
-            color = KinetiqTextMuted
+            text = "Combined from today's four pillars",
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.textSecondary
           )
         }
-
-        if (selectedPoint != null) {
-          val selectedMetGoal = selectedPoint.steps >= safeTarget
-          Surface(
-            color = if (selectedMetGoal) {
-              emeraldColor.copy(alpha = 0.14f)
-            } else {
-              KineticViolet.copy(alpha = 0.14f)
-            },
-            shape = RoundedCornerShape(10.dp),
-            border = androidx.compose.foundation.BorderStroke(
-              0.8.dp,
-              if (selectedMetGoal) emeraldColor.copy(alpha = 0.45f) else KineticViolet.copy(alpha = 0.45f)
-            ),
-            modifier = Modifier.testTag("weekly_step_selected_badge")
-          ) {
-            Text(
-              text = "${selectedPoint.dayLabel}: ${selectedPoint.steps}",
-              style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-              color = if (selectedMetGoal) emeraldColor else KinetiqTextWhite,
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
-          }
-        }
+        Text(
+          text = "$score%",
+          style = KinetiqValueTextStyle.copy(fontWeight = FontWeight.SemiBold),
+          color = MaterialTheme.colorScheme.primary
+        )
       }
 
-      Spacer(modifier = Modifier.height(10.dp))
+      HorizontalDivider(color = colors.divider)
 
-      Box(
+      BreakdownPillarRow(
+        icon = Icons.Default.DirectionsWalk,
+        title = "Steps",
+        valueText = if (currentSteps > 0) "${formatStepCount(currentSteps)} / ${formatStepCount(targetSteps)}" else "— / ${formatStepCount(targetSteps)}",
+        percent = (stepProgress * 100).roundToInt(),
+        color = colors.steps
+      )
+      BreakdownPillarRow(
+        icon = Icons.Default.WaterDrop,
+        title = "Water",
+        valueText = "${formatLitresOrMl(currentWaterMl)} / ${formatLitresOrMl(targetWaterMl)}",
+        percent = (waterProgress * 100).roundToInt(),
+        color = colors.water
+      )
+      BreakdownPillarRow(
+        icon = Icons.Default.Bedtime,
+        title = "Sleep",
+        valueText = "${formatSleepDuration(sleepMinutes)} / ${String.format(Locale.US, "%.0fh", targetSleepHours)}",
+        percent = (sleepProgress * 100).roundToInt(),
+        color = colors.sleep
+      )
+      BreakdownPillarRow(
+        icon = Icons.Default.SelfImprovement,
+        title = "Habits",
+        valueText = if (totalHabits > 0) "$completedHabits / $totalHabits" else "—",
+        percent = (habitProgress * 100).roundToInt(),
+        color = colors.habits
+      )
+
+      HorizontalDivider(color = colors.divider)
+
+      Row(
         modifier = Modifier
           .fillMaxWidth()
-          .height(124.dp)
+          .heightIn(min = 48.dp)
+          .clip(RoundedCornerShape(16.dp))
+          .background(colors.surface2)
+          .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        Canvas(
-          modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(points) {
-              detectTapGestures { tapOffset ->
-                if (points.isEmpty()) return@detectTapGestures
-                val sidePad = 14.dp.toPx()
-                val chartW = (size.width - sidePad * 2f).coerceAtLeast(1f)
-                val nearest = if (points.size == 1) {
-                  0
-                } else {
-                  points.indices.minByOrNull { i ->
-                    val nodeX = sidePad + (i.toFloat() / (points.size - 1)) * chartW
-                    kotlin.math.abs(tapOffset.x - nodeX)
-                  } ?: 0
-                }
-                if (nearest != selectedIndex) {
-                  haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                  selectedIndex = nearest
-                }
-              }
-            }
-        ) {
-          if (points.isEmpty()) return@Canvas
-
-          val sidePad = 14.dp.toPx()
-          val topPad = 12.dp.toPx()
-          val bottomPad = 10.dp.toPx()
-          val chartW = (size.width - sidePad * 2f).coerceAtLeast(1f)
-          val chartH = (size.height - topPad - bottomPad).coerceAtLeast(1f)
-          val baseLineY = topPad + chartH
-
-          // Subtle baseline & midpoint horizontal gridlines
-          drawLine(
-            color = KinetiqBorderSubtle.copy(alpha = 0.5f),
-            start = Offset(sidePad, baseLineY),
-            end = Offset(sidePad + chartW, baseLineY),
-            strokeWidth = 1.dp.toPx()
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Rest day",
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            color = colors.textPrimary
           )
-          drawLine(
-            color = KinetiqBorderSubtle.copy(alpha = 0.3f),
-            start = Offset(sidePad, topPad + chartH * 0.5f),
-            end = Offset(sidePad + chartW, topPad + chartH * 0.5f),
-            strokeWidth = 0.8.dp.toPx()
+          Text(
+            text = "Weights hydration and sleep while pausing step pressure",
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.textSecondary
           )
-
-          // Dashed daily step target reference line
-          val targetFraction = (safeTarget.toFloat() / maxChartSteps).coerceIn(0f, 1f)
-          val targetY = topPad + chartH - (targetFraction * chartH)
-          drawLine(
-            color = emeraldColor.copy(alpha = 0.55f),
-            start = Offset(sidePad, targetY),
-            end = Offset(sidePad + chartW, targetY),
-            strokeWidth = 1.2.dp.toPx(),
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 5.dp.toPx()), 0f)
-          )
-
-          val coords = points.mapIndexed { i, point ->
-            val x = if (points.size == 1) {
-              sidePad + chartW / 2f
-            } else {
-              sidePad + (i.toFloat() / (points.size - 1)) * chartW
-            }
-            val ratio = (point.steps.toFloat() / maxChartSteps).coerceIn(0f, 1f)
-            val y = topPad + chartH - (ratio * chartH * animReveal)
-            Offset(x, y)
-          }
-
-          if (coords.size >= 2) {
-            val linePath = Path().apply {
-              moveTo(coords.first().x, coords.first().y)
-              for (i in 1 until coords.size) {
-                val prev = coords[i - 1]
-                val curr = coords[i]
-                val midX = (prev.x + curr.x) / 2f
-                cubicTo(midX, prev.y, midX, curr.y, curr.x, curr.y)
-              }
-            }
-
-            val fillPath = Path().apply {
-              addPath(linePath)
-              lineTo(coords.last().x, baseLineY)
-              lineTo(coords.first().x, baseLineY)
-              close()
-            }
-
-            drawPath(
-              path = fillPath,
-              brush = Brush.verticalGradient(
-                colors = listOf(
-                  KineticViolet.copy(alpha = 0.30f),
-                  KineticViolet.copy(alpha = 0.04f),
-                  Color.Transparent
-                ),
-                startY = topPad,
-                endY = baseLineY
-              )
-            )
-
-            drawPath(
-              path = linePath,
-              color = KineticViolet,
-              style = Stroke(
-                width = 2.6.dp.toPx(),
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-              )
-            )
-          }
-
-          // Vertical guide on selected node
-          coords.getOrNull(safeSelectedIndex)?.let { sel ->
-            drawLine(
-              color = KinetiqBorderGlow.copy(alpha = 0.55f),
-              start = Offset(sel.x, sel.y),
-              end = Offset(sel.x, baseLineY),
-              strokeWidth = 1.dp.toPx(),
-              pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 3.dp.toPx()), 0f)
-            )
-          }
-
-          // Data point nodes
-          coords.forEachIndexed { index, center ->
-            val metGoal = points[index].steps >= safeTarget
-            val nodeColor = if (metGoal) emeraldColor else KinetiqPurpleNeon
-            val isSelected = index == safeSelectedIndex
-
-            if (isSelected) {
-              drawCircle(
-                color = nodeColor.copy(alpha = 0.28f),
-                radius = 8.5.dp.toPx(),
-                center = center
-              )
-              drawCircle(
-                color = nodeColor,
-                radius = 4.8.dp.toPx(),
-                center = center
-              )
-              drawCircle(
-                color = KinetiqObsidianSurface,
-                radius = 2.dp.toPx(),
-                center = center
-              )
-            } else {
-              drawCircle(
-                color = nodeColor,
-                radius = 3.4.dp.toPx(),
-                center = center
-              )
-              drawCircle(
-                color = KinetiqObsidianSurface,
-                radius = 1.4.dp.toPx(),
-                center = center
-              )
-            }
-          }
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(
+          checked = isRestDay,
+          onCheckedChange = { onToggleRestDay() }
+        )
       }
 
-      // Interactive day selector labels (48.dp minimum touch target height)
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-      ) {
-        points.forEachIndexed { index, point ->
-          val isSelected = index == safeSelectedIndex
-          val metGoal = point.steps >= safeTarget
-          Box(
-            modifier = Modifier
-              .weight(1f)
-              .heightIn(min = 48.dp)
-              .clip(RoundedCornerShape(8.dp))
-              .clickable {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                selectedIndex = index
-              }
-              .testTag("weekly_step_day_$index"),
-            contentAlignment = Alignment.Center
-          ) {
-            Box(
-              modifier = Modifier
-                .background(
-                  color = if (isSelected) KineticViolet.copy(alpha = 0.18f) else Color.Transparent,
-                  shape = RoundedCornerShape(6.dp)
-                )
-                .padding(horizontal = 4.dp, vertical = 3.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = point.dayLabel,
-                style = MaterialTheme.typography.labelSmall.copy(
-                  fontSize = 10.sp,
-                  fontWeight = if (isSelected || point.isToday) FontWeight.Bold else FontWeight.Medium
-                ),
-                color = when {
-                  isSelected && metGoal -> emeraldColor
-                  isSelected -> KinetiqTextWhite
-                  point.isToday -> KinetiqPurpleNeon
-                  else -> KinetiqTextSubtle
-                },
-                maxLines = 1
-              )
+      if (stepTrackerStatus != StepTrackerStatus.SENSOR_UNAVAILABLE) {
+        Surface(
+          shape = RoundedCornerShape(16.dp),
+          color = colors.surface2,
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable {
+              if (stepTrackerStatus == StepTrackerStatus.PERMISSION_REQUIRED) onOpenSettings()
+              onToggleStepSensor()
             }
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              text = when (stepTrackerStatus) {
+                StepTrackerStatus.ACTIVE -> "Live step counter active"
+                StepTrackerStatus.PAUSED -> "Live step counter paused"
+                StepTrackerStatus.PERMISSION_REQUIRED -> "Allow activity permission for live steps"
+                StepTrackerStatus.SENSOR_UNAVAILABLE -> "No hardware step counter"
+              },
+              style = MaterialTheme.typography.bodyMedium,
+              color = colors.textPrimary,
+              modifier = Modifier.weight(1f)
+            )
+            Text(
+              text = when (stepTrackerStatus) {
+                StepTrackerStatus.ACTIVE -> "Pause"
+                StepTrackerStatus.PAUSED -> "Resume"
+                else -> "Enable"
+              },
+              style = MaterialTheme.typography.labelLarge,
+              color = MaterialTheme.colorScheme.primary
+            )
           }
         }
       }
@@ -1319,253 +1191,1068 @@ private fun WeeklyStepLineChart(
 }
 
 @Composable
-private fun HydrationPillarCard(
-  currentWaterMl: Int,
-  targetWaterMl: Int,
-  logs: List<com.example.data.model.HydrationRecord>,
-  isExpanded: Boolean,
-  onToggleExpand: () -> Unit,
-  onQuickAddWater: (Int, String) -> Unit,
-  onOpenCustomDialog: () -> Unit,
-  onDeleteLog: (Long) -> Unit
+private fun BreakdownPillarRow(
+  icon: ImageVector,
+  title: String,
+  valueText: String,
+  percent: Int,
+  color: Color
 ) {
-  val glassCount = (currentWaterMl / 250)
-  val progress = (currentWaterMl.toFloat() / targetWaterMl).coerceIn(0f, 1f)
-
-  val animWaterProgress by animateFloatAsState(
-    targetValue = progress,
-    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-    label = "anim_water_progress"
-  )
-
-  Card(
+  val colors = MaterialTheme.kinetiqColors
+  Row(
     modifier = Modifier
       .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = KinetiqBorderSubtle,
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+      .padding(vertical = 2.dp),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Column(modifier = Modifier.padding(20.dp)) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(10.dp),
+      modifier = Modifier.weight(1f)
+    ) {
+      Box(
+        modifier = Modifier
+          .size(32.dp)
+          .background(color.copy(alpha = 0.14f), CircleShape),
+        contentAlignment = Alignment.Center
+      ) {
+        Icon(
+          imageVector = icon,
+          contentDescription = null,
+          tint = color,
+          modifier = Modifier.size(17.dp)
+        )
+      }
+      Column {
+        Text(
+          text = title,
+          style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+          color = colors.textPrimary
+        )
+        Text(
+          text = valueText,
+          style = MaterialTheme.typography.labelMedium,
+          color = colors.textSecondary
+        )
+      }
+    }
+
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+      if (percent >= 100) {
+        Icon(
+          imageVector = Icons.Default.Check,
+          contentDescription = "Goal reached",
+          tint = color,
+          modifier = Modifier.size(16.dp)
+        )
+      }
+      Text(
+        text = "$percent%",
+        style = KinetiqValueTextStyle.copy(fontSize = 15.sp),
+        color = color
+      )
+    }
+  }
+}
+
+// ============================================================================
+// Step 3: Asymmetric Progress Bento (Tall Hydration + Stacked Steps & Sleep)
+// ============================================================================
+
+@Composable
+private fun AsymmetricPillarsBento(
+  currentWaterMl: Int,
+  targetWaterMl: Int,
+  waterProgress: Float,
+  currentSteps: Int,
+  targetSteps: Int,
+  stepProgress: Float,
+  hasActivityRecord: Boolean,
+  stepTrackerStatus: StepTrackerStatus,
+  sleepMinutes: Int?,
+  targetSleepHours: Float,
+  sleepProgress: Float,
+  reduceMotion: Boolean,
+  onQuickAddWater: (Int, String) -> Unit,
+  onOpenWaterLogs: () -> Unit,
+  onOpenCustomWater: () -> Unit,
+  onStepsClick: () -> Unit,
+  onSleepClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val colors = MaterialTheme.kinetiqColors
+  val progressSpec = if (reduceMotion) tween<Float>(0) else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
+  val animWater by animateFloatAsState(
+    targetValue = waterProgress.coerceIn(0f, 1f),
+    animationSpec = progressSpec,
+    label = "bento_water"
+  )
+  val animSteps by animateFloatAsState(
+    targetValue = stepProgress.coerceIn(0f, 1f),
+    animationSpec = progressSpec,
+    label = "bento_steps"
+  )
+  val animSleep by animateFloatAsState(
+    targetValue = sleepProgress.coerceIn(0f, 1f),
+    animationSpec = progressSpec,
+    label = "bento_sleep"
+  )
+
+  val waterPct = (waterProgress * 100).roundToInt()
+  val stepsPct = (stepProgress * 100).roundToInt()
+  val sleepPct = (sleepProgress * 100).roundToInt()
+
+  val waterInteraction = remember { MutableInteractionSource() }
+  val waterPressed by waterInteraction.collectIsPressedAsState()
+  val waterScale by animateFloatAsState(
+    targetValue = if (waterPressed) 0.97f else 1f,
+    animationSpec = spring(dampingRatio = 0.8f),
+    label = "water_tile_scale"
+  )
+
+  Row(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(IntrinsicSize.Max),
+    horizontalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    // Left Column: Tall Hydration Tile (liquid fill + +250/+500 ml + long-press custom)
+    Surface(
+      shape = RoundedCornerShape(24.dp),
+      color = colors.surface2,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight()
+        .scale(waterScale)
+        .clip(RoundedCornerShape(24.dp))
+        .combinedClickable(
+          interactionSource = waterInteraction,
+          indication = null,
+          onClick = onOpenWaterLogs,
+          onLongClick = onOpenCustomWater
+        )
+        .semantics {
+          contentDescription = "Water, ${formatLitresOrMl(currentWaterMl)} of ${formatLitresOrMl(targetWaterMl)}, $waterPct percent. Tap for logs, long press for custom."
+        }
+        .testTag("hydration_bento_tile")
+    ) {
+      Box(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+          if (animWater > 0.01f) {
+            val fillHeight = size.height * (animWater * 0.82f)
+            val topY = size.height - fillHeight
+            drawRect(
+              color = colors.water.copy(alpha = 0.14f),
+              topLeft = Offset(0f, topY),
+              size = Size(size.width, fillHeight)
+            )
+          }
+        }
+
+        Column(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+          verticalArrangement = Arrangement.SpaceBetween
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.Default.WaterDrop,
+                  contentDescription = null,
+                  tint = colors.water,
+                  modifier = Modifier.size(18.dp)
+                )
+                Text(
+                  text = "Water",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = colors.textSecondary
+                )
+              }
+
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+              ) {
+                if (waterPct >= 100) {
+                  Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Goal reached",
+                    tint = colors.water,
+                    modifier = Modifier.size(14.dp)
+                  )
+                }
+                Text(
+                  text = "$waterPct%",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = colors.water
+                )
+              }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+              text = if (currentWaterMl > 0) formatLitresOrMl(currentWaterMl) else "—",
+              style = KinetiqValueTextStyle.copy(fontSize = 24.sp),
+              color = colors.textPrimary
+            )
+            Text(
+              text = "of ${formatLitresOrMl(targetWaterMl)}",
+              style = MaterialTheme.typography.labelMedium,
+              color = colors.textSecondary
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+            PillarThinProgressLine(progress = animWater, color = colors.water)
+          }
+
+          Spacer(modifier = Modifier.height(16.dp))
+
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              TonalWaterQuickButton(
+                label = "+250",
+                accent = colors.water,
+                onClick = { onQuickAddWater(250, "Glass") },
+                modifier = Modifier
+                  .weight(1f)
+                  .testTag("quick_water_250_button")
+              )
+              TonalWaterQuickButton(
+                label = "+500",
+                accent = colors.water,
+                onClick = { onQuickAddWater(500, "Flask") },
+                modifier = Modifier
+                  .weight(1f)
+                  .testTag("quick_water_500_button")
+              )
+            }
+            Text(
+              text = "Hold tile for custom",
+              style = MaterialTheme.typography.labelSmall,
+              color = colors.textSecondary,
+              modifier = Modifier.fillMaxWidth(),
+              textAlign = TextAlign.Center
+            )
+          }
+        }
+      }
+    }
+
+    // Right Column: Two Smaller Stacked Tiles (Steps + Sleep)
+    Column(
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight(),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      val stepsValue = if (currentSteps > 0 || hasActivityRecord) formatStepCount(currentSteps) else "—"
+      val stepsSubtitle = if (stepTrackerStatus == StepTrackerStatus.PERMISSION_REQUIRED && currentSteps == 0) {
+        "Tap to enable sensor"
+      } else {
+        "of ${formatStepCount(targetSteps)} · $stepsPct%"
+      }
+
+      CompactPillarTile(
+        icon = Icons.Default.DirectionsWalk,
+        label = "Steps",
+        valueText = stepsValue,
+        goalText = stepsSubtitle,
+        progress = animSteps,
+        isGoalReached = stepsPct >= 100,
+        accent = colors.steps,
+        contentDesc = "Steps, $currentSteps of $targetSteps, $stepsPct percent.",
+        onClick = onStepsClick,
+        modifier = Modifier
+          .fillMaxWidth()
+          .weight(1f)
+          .testTag("steps_bento_tile")
+      )
+
+      val sleepValue = formatSleepDuration(sleepMinutes)
+      val sleepSubtitle = if (sleepMinutes != null && sleepMinutes > 0) {
+        "of ${String.format(Locale.US, "%.0fh", targetSleepHours)} · $sleepPct%"
+      } else {
+        "Tap to log sleep"
+      }
+
+      CompactPillarTile(
+        icon = Icons.Default.Bedtime,
+        label = "Sleep",
+        valueText = sleepValue,
+        goalText = sleepSubtitle,
+        progress = animSleep,
+        isGoalReached = sleepPct >= 100,
+        accent = colors.sleep,
+        contentDesc = "Sleep, ${if (sleepMinutes != null && sleepMinutes > 0) sleepValue else "not logged"} of ${targetSleepHours.toInt()} hours.",
+        onClick = onSleepClick,
+        modifier = Modifier
+          .fillMaxWidth()
+          .weight(1f)
+          .testTag("sleep_bento_tile")
+      )
+    }
+  }
+}
+
+@Composable
+private fun CompactPillarTile(
+  icon: ImageVector,
+  label: String,
+  valueText: String,
+  goalText: String,
+  progress: Float,
+  isGoalReached: Boolean,
+  accent: Color,
+  contentDesc: String,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val colors = MaterialTheme.kinetiqColors
+  val interaction = remember { MutableInteractionSource() }
+  val pressed by interaction.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (pressed) 0.97f else 1f,
+    animationSpec = spring(dampingRatio = 0.8f),
+    label = "compact_tile_scale"
+  )
+
+  Surface(
+    shape = RoundedCornerShape(24.dp),
+    color = colors.surface2,
+    modifier = modifier
+      .scale(scale)
+      .clip(RoundedCornerShape(24.dp))
+      .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+      .semantics { contentDescription = contentDesc }
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp),
+      verticalArrangement = Arrangement.SpaceBetween
+    ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          Box(
-            modifier = Modifier
-              .size(42.dp)
-              .background(BioCyan.copy(alpha = 0.15f), CircleShape),
-            contentAlignment = Alignment.Center
-          ) {
-            Icon(
-              imageVector = Icons.Default.WaterDrop,
-              contentDescription = null,
-              tint = BioCyan
-            )
-          }
-          Spacer(modifier = Modifier.width(12.dp))
-          Column {
-            Text(
-              text = "BIO-HYDRATION",
-              style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
-                fontSize = 10.sp
-              ),
-              color = BioCyan
-            )
-            Text(
-              text = "Target: $targetWaterMl ml (~${targetWaterMl / 250} glasses)",
-              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextWhite
-            )
-          }
-        }
-
-        IconButton(
-          onClick = onToggleExpand,
-          modifier = Modifier.bounceClick(scaleDown = 0.88f) { onToggleExpand() }
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
           Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-            contentDescription = "Expand hydration logs",
-            tint = KinetiqTextMuted
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(17.dp)
+          )
+          Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.textSecondary
+          )
+        }
+        if (isGoalReached) {
+          Icon(
+            imageVector = Icons.Default.Check,
+            contentDescription = "Goal reached",
+            tint = accent,
+            modifier = Modifier.size(15.dp)
           )
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
+      Spacer(modifier = Modifier.height(8.dp))
 
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-      ) {
-        Column {
-          Text(
-            text = "$currentWaterMl ml",
-            style = MaterialTheme.typography.headlineMedium.copy(
-              fontWeight = FontWeight.Black,
-              color = BioCyan,
-              fontSize = 32.sp
-            )
-          )
-          Text(
-            text = "$glassCount glasses consumed",
-            style = MaterialTheme.typography.labelSmall,
-            color = KinetiqTextMuted
-          )
-        }
-
+      Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-          text = "${(animWaterProgress * 100).toInt()}% of goal",
-          style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.Bold,
-            color = BioCyan
-          )
+          text = valueText,
+          style = KinetiqValueTextStyle,
+          color = colors.textPrimary
+        )
+        Text(
+          text = goalText,
+          style = MaterialTheme.typography.labelMedium,
+          color = colors.textSecondary
         )
       }
 
-      Spacer(modifier = Modifier.height(14.dp))
+      Spacer(modifier = Modifier.height(8.dp))
+      PillarThinProgressLine(progress = progress, color = accent)
+    }
+  }
+}
 
-      LinearProgressIndicator(
-        progress = { animWaterProgress },
+@Composable
+private fun PillarThinProgressLine(
+  progress: Float,
+  color: Color,
+  modifier: Modifier = Modifier
+) {
+  Box(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(4.dp)
+      .clip(RoundedCornerShape(50))
+      .background(color.copy(alpha = 0.12f))
+  ) {
+    if (progress > 0.005f) {
+      Box(
         modifier = Modifier
-          .fillMaxWidth()
-          .height(8.dp)
-          .clip(RoundedCornerShape(4.dp)),
-        color = BioCyan,
-        trackColor = BioCyan.copy(alpha = 0.15f)
+          .fillMaxWidth(progress.coerceIn(0.02f, 1f))
+          .height(4.dp)
+          .clip(RoundedCornerShape(50))
+          .background(color)
       )
+    }
+  }
+}
 
-      Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun TonalWaterQuickButton(
+  label: String,
+  accent: Color,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val colors = MaterialTheme.kinetiqColors
+  val interaction = remember { MutableInteractionSource() }
+  val pressed by interaction.collectIsPressedAsState()
+  val scale by animateFloatAsState(
+    targetValue = if (pressed) 0.97f else 1f,
+    animationSpec = spring(dampingRatio = 0.8f),
+    label = "water_btn_scale"
+  )
 
-      // Quick Hydration Buttons with spring bounce
+  Surface(
+    shape = RoundedCornerShape(50),
+    color = colors.surface3,
+    modifier = modifier
+      .heightIn(min = 48.dp)
+      .scale(scale)
+      .clip(RoundedCornerShape(50))
+      .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+  ) {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
+      Text(
+        text = label,
+        style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp),
+        color = accent,
+        maxLines = 1
+      )
+    }
+  }
+}
+
+@Composable
+private fun WaterLogsModalSheet(
+  currentWaterMl: Int,
+  targetWaterMl: Int,
+  waterLogs: List<HydrationRecord>,
+  onDeleteLog: (Long) -> Unit,
+  onAddCustom: () -> Unit,
+  onDismiss: () -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  val timeFmt = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    sheetState = sheetState,
+    containerColor = colors.surface1,
+    contentColor = colors.textPrimary
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
-        OutlinedButton(
-          onClick = { onQuickAddWater(200, "Cup") },
-          modifier = Modifier
-            .weight(1f)
-            .bounceClick { onQuickAddWater(200, "Cup") },
-          border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-          colors = ButtonDefaults.outlinedButtonColors(contentColor = KinetiqTextWhite),
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          Text("+200ml", fontSize = 11.sp)
-        }
-        OutlinedButton(
-          onClick = { onQuickAddWater(250, "Glass") },
-          modifier = Modifier
-            .weight(1f)
-            .bounceClick { onQuickAddWater(250, "Glass") },
-          border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-          colors = ButtonDefaults.outlinedButtonColors(contentColor = KinetiqTextWhite),
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          Text("+250ml", fontSize = 11.sp)
-        }
-        OutlinedButton(
-          onClick = { onQuickAddWater(500, "Flask") },
-          modifier = Modifier
-            .weight(1f)
-            .bounceClick { onQuickAddWater(500, "Flask") },
-          border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderSubtle),
-          colors = ButtonDefaults.outlinedButtonColors(contentColor = KinetiqTextWhite),
-          shape = RoundedCornerShape(12.dp)
-        ) {
-          Text("+500ml", fontSize = 11.sp)
-        }
-        Button(
-          onClick = onOpenCustomDialog,
-          modifier = Modifier
-            .weight(1f)
-            .bounceClick { onOpenCustomDialog() },
-          shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = BioCyan,
-            contentColor = KinetiqBlack
+        Column {
+          Text(
+            text = "Today's water",
+            style = MaterialTheme.typography.titleLarge,
+            color = colors.textPrimary
           )
+          Text(
+            text = "${formatLitresOrMl(currentWaterMl)} of ${formatLitresOrMl(targetWaterMl)}",
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.textSecondary
+          )
+        }
+        TextButton(
+          onClick = onAddCustom,
+          modifier = Modifier.heightIn(min = 48.dp)
         ) {
-          Text("+Custom", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+          Text("Custom amount", color = MaterialTheme.colorScheme.primary)
         }
       }
 
-      // Expandable Log History List
-      AnimatedVisibility(
-        visible = isExpanded,
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut()
+      HorizontalDivider(color = colors.divider)
+
+      if (waterLogs.isEmpty()) {
+        Text(
+          text = "No water logged yet today.",
+          style = MaterialTheme.typography.bodyMedium,
+          color = colors.textSecondary,
+          modifier = Modifier.padding(vertical = 12.dp)
+        )
+      } else {
+        waterLogs.take(8).forEach { entry ->
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.WaterDrop,
+                contentDescription = null,
+                tint = colors.water,
+                modifier = Modifier.size(16.dp)
+              )
+              Column {
+                Text(
+                  text = "${entry.amountMl} ml · ${entry.containerType}",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = colors.textPrimary
+                )
+                Text(
+                  text = timeFmt.format(Date(entry.timestamp)),
+                  style = MaterialTheme.typography.labelMedium,
+                  color = colors.textSecondary
+                )
+              }
+            }
+
+            IconButton(
+              onClick = { onDeleteLog(entry.id) },
+              modifier = Modifier.size(48.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.DeleteOutline,
+                contentDescription = "Delete water entry",
+                tint = colors.textSecondary,
+                modifier = Modifier.size(18.dp)
+              )
+            }
+          }
+          HorizontalDivider(color = colors.divider)
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun CustomWaterInputDialog(
+  onDismiss: () -> Unit,
+  onConfirm: (Int, String) -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  var amountText by remember { mutableStateOf("350") }
+  var container by remember { mutableStateOf("Bottle") }
+  val containers = listOf("Glass", "Bottle", "Flask", "Mug")
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = colors.surface1,
+    titleContentColor = colors.textPrimary,
+    textContentColor = colors.textPrimary,
+    title = {
+      Text("Log water", style = MaterialTheme.typography.titleLarge)
+    },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+          value = amountText,
+          onValueChange = { amountText = it.filter { ch -> ch.isDigit() } },
+          label = { Text("Amount (ml)") },
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          containers.forEach { item ->
+            val selected = item == container
+            Surface(
+              shape = RoundedCornerShape(50),
+              color = if (selected) colors.water.copy(alpha = 0.2f) else colors.surface2,
+              modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 40.dp)
+                .clip(RoundedCornerShape(50))
+                .clickable { container = item }
+            ) {
+              Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
+                Text(
+                  text = item,
+                  style = MaterialTheme.typography.labelMedium,
+                  color = if (selected) colors.water else colors.textSecondary,
+                  maxLines = 1
+                )
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val ml = amountText.toIntOrNull()?.coerceIn(25, 4000) ?: 250
+          onConfirm(ml, container)
+        },
+        colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.heightIn(min = 48.dp)
       ) {
-        Column(modifier = Modifier.padding(top = 16.dp)) {
-          Text(
-            text = "Today's Intake Logs",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-            color = KinetiqTextWhite
-          )
-          Spacer(modifier = Modifier.height(8.dp))
+        Text("Add water")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text("Cancel", color = colors.textSecondary)
+      }
+    }
+  )
+}
 
-          if (logs.isEmpty()) {
+@Composable
+private fun CustomStepsInputDialog(
+  stepTrackerStatus: StepTrackerStatus,
+  onToggleSensor: () -> Unit,
+  onDismiss: () -> Unit,
+  onConfirm: (Int) -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  var stepsText by remember { mutableStateOf("1000") }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = colors.surface1,
+    titleContentColor = colors.textPrimary,
+    textContentColor = colors.textPrimary,
+    title = {
+      Text("Add steps", style = MaterialTheme.typography.titleLarge)
+    },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+          value = stepsText,
+          onValueChange = { stepsText = it.filter { ch -> ch.isDigit() } },
+          label = { Text("Steps to add") },
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          listOf(500, 1000, 2500).forEach { preset ->
+            Surface(
+              shape = RoundedCornerShape(50),
+              color = colors.surface2,
+              modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 40.dp)
+                .clip(RoundedCornerShape(50))
+                .clickable { stepsText = preset.toString() }
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Text(
+                  text = "+$preset",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = colors.steps
+                )
+              }
+            }
+          }
+        }
+        if (stepTrackerStatus == StepTrackerStatus.ACTIVE || stepTrackerStatus == StepTrackerStatus.PAUSED) {
+          HorizontalDivider(color = colors.divider)
+          TextButton(
+            onClick = onToggleSensor,
+            modifier = Modifier
+              .fillMaxWidth()
+              .heightIn(min = 48.dp)
+          ) {
             Text(
-              text = "No water logs recorded yet today. Tap buttons above to record.",
-              style = MaterialTheme.typography.bodySmall,
-              color = KinetiqTextMuted
+              text = if (stepTrackerStatus == StepTrackerStatus.ACTIVE) "Pause live step counter" else "Resume live step counter",
+              color = colors.textSecondary
             )
-          } else {
-            val timeSdf = SimpleDateFormat("h:mm a", Locale.getDefault())
-            logs.take(5).forEach { record ->
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(vertical = 5.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(
-                    imageVector = Icons.Default.WaterDrop,
-                    contentDescription = null,
-                    tint = BioCyan,
-                    modifier = Modifier.size(16.dp)
-                  )
-                  Spacer(modifier = Modifier.width(8.dp))
-                  Text(
-                    text = "${record.amountMl} ml (${record.containerType})",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = KinetiqTextWhite
-                  )
-                }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val steps = stepsText.toIntOrNull()?.coerceIn(1, 50000) ?: 500
+          onConfirm(steps)
+        },
+        colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.heightIn(min = 48.dp)
+      ) {
+        Text("Add steps")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text("Cancel", color = colors.textSecondary)
+      }
+    }
+  )
+}
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                  Text(
-                    text = timeSdf.format(Date(record.timestamp)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = KinetiqTextSubtle
-                  )
-                  IconButton(
-                    onClick = { onDeleteLog(record.id) },
-                    modifier = Modifier
-                      .size(28.dp)
-                      .bounceClick { onDeleteLog(record.id) }
-                  ) {
-                    Icon(
-                      imageVector = Icons.Default.Delete,
-                      contentDescription = "Delete entry",
-                      tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                      modifier = Modifier.size(16.dp)
+@Composable
+private fun CalmSleepDialog(
+  onDismiss: () -> Unit,
+  onConfirm: (Long, Long, Int, String) -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  var hoursText by remember { mutableStateOf("7.5") }
+  var qualityRating by remember { mutableStateOf(4) }
+  var notes by remember { mutableStateOf("") }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    containerColor = colors.surface1,
+    titleContentColor = colors.textPrimary,
+    textContentColor = colors.textPrimary,
+    title = {
+      Text("Log sleep", style = MaterialTheme.typography.titleLarge)
+    },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedTextField(
+          value = hoursText,
+          onValueChange = { hoursText = it.filter { ch -> ch.isDigit() || ch == '.' } },
+          label = { Text("Hours slept") },
+          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth()
+        )
+        Text("Sleep quality", style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          for (rating in 1..5) {
+            val selected = rating <= qualityRating
+            Surface(
+              shape = RoundedCornerShape(50),
+              color = if (selected) colors.sleep.copy(alpha = 0.22f) else colors.surface2,
+              modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp)
+                .clip(RoundedCornerShape(50))
+                .clickable { qualityRating = rating }
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Text(
+                  text = "$rating",
+                  style = MaterialTheme.typography.labelLarge,
+                  color = if (selected) colors.sleep else colors.textSecondary
+                )
+              }
+            }
+          }
+        }
+        OutlinedTextField(
+          value = notes,
+          onValueChange = { notes = it },
+          label = { Text("Notes (optional)") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth()
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val hours = hoursText.toFloatOrNull()?.coerceIn(0.5f, 16f) ?: 7.5f
+          val durationMs = (hours * 3600f * 1000f).toLong()
+          val wakeMs = System.currentTimeMillis()
+          val bedMs = wakeMs - durationMs
+          onConfirm(bedMs, wakeMs, qualityRating, notes.trim())
+        },
+        colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.heightIn(min = 48.dp)
+      ) {
+        Text("Save sleep")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text("Cancel", color = colors.textSecondary)
+      }
+    }
+  )
+}
+
+// ============================================================================
+// Step 4 & 5: Habits (Flat + 7-day dots + Morph Check), Breathing (4s/6s),
+// Reminders (Dismissible), Log FAB Sheet, Staggered Motion & Reduce-Motion
+// ============================================================================
+
+@Composable
+private fun rememberReduceMotionEnabled(): Boolean {
+  val context = LocalContext.current
+  return remember(context) {
+    try {
+      Settings.Global.getFloat(
+        context.contentResolver,
+        Settings.Global.ANIMATOR_DURATION_SCALE,
+        1f
+      ) == 0f
+    } catch (_: Exception) {
+      false
+    }
+  }
+}
+
+@Composable
+private fun CalmSectionReveal(
+  index: Int,
+  reduceMotion: Boolean,
+  content: @Composable () -> Unit
+) {
+  if (reduceMotion) {
+    content()
+    return
+  }
+
+  val progress = remember { Animatable(0f) }
+  LaunchedEffect(Unit) {
+    if (index > 0) delay(index * 40L)
+    progress.animateTo(
+      targetValue = 1f,
+      animationSpec = tween(
+        durationMillis = 300,
+        easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1.0f)
+      )
+    )
+  }
+
+  Box(
+    modifier = Modifier.graphicsLayer {
+      alpha = progress.value
+      translationY = (1f - progress.value) * 12.dp.toPx()
+    }
+  ) {
+    content()
+  }
+}
+
+@Composable
+private fun FlatHabitsChecklist(
+  habits: List<Habit>,
+  completedHabitIds: Set<Long>,
+  pastWeekDates: List<String>,
+  todayDate: String,
+  pastWeekHabitLogs: List<HabitLog>,
+  todayHabitLogs: List<HabitLog>,
+  reduceMotion: Boolean,
+  onToggleHabit: (Long) -> Unit,
+  onDeleteHabit: (Long) -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  val completedCount = habits.count { it.id in completedHabitIds }
+  val total = habits.size
+
+  val logsByHabitDate = remember(pastWeekHabitLogs, todayHabitLogs, todayDate) {
+    val map = HashMap<Long, MutableSet<String>>()
+    pastWeekHabitLogs.forEach { log ->
+      if (log.date != todayDate) {
+        map.getOrPut(log.habitId) { mutableSetOf() }.add(log.date)
+      }
+    }
+    todayHabitLogs.forEach { log ->
+      map.getOrPut(log.habitId) { mutableSetOf() }.add(todayDate)
+    }
+    map
+  }
+
+  Column(modifier = Modifier.fillMaxWidth()) {
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(bottom = 12.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(
+        text = "Habits",
+        style = MaterialTheme.typography.titleLarge,
+        color = colors.textPrimary
+      )
+      Text(
+        text = if (total > 0) "$completedCount of $total" else "—",
+        style = MaterialTheme.typography.labelMedium,
+        color = colors.textSecondary
+      )
+    }
+
+    if (habits.isEmpty()) {
+      Text(
+        text = "No habits yet. Tap Log to add your first daily habit.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.textSecondary,
+        modifier = Modifier.padding(vertical = 8.dp)
+      )
+    } else {
+      habits.forEachIndexed { idx, habit ->
+        val isDone = habit.id in completedHabitIds
+        val completedDates = logsByHabitDate[habit.id] ?: emptySet()
+        val weekStatus = pastWeekDates.map { date ->
+          if (date == todayDate) isDone else (date in completedDates)
+        }
+
+        val cornerRadius by animateDpAsState(
+          targetValue = if (isDone) 6.dp else 13.dp,
+          animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f),
+          label = "habit_check_morph"
+        )
+        val rowInteraction = remember { MutableInteractionSource() }
+        val rowPressed by rowInteraction.collectIsPressedAsState()
+        val rowScale by animateFloatAsState(
+          targetValue = if (rowPressed && !reduceMotion) 0.97f else 1f,
+          animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f),
+          label = "habit_row_scale"
+        )
+
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .scale(rowScale)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(
+              interactionSource = rowInteraction,
+              indication = null
+            ) { onToggleHabit(habit.id) }
+            .padding(vertical = 10.dp)
+            .semantics {
+              contentDescription = "${habit.title}, ${if (isDone) "completed" else "not completed"}"
+            },
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+          Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(26.dp)
+                .clip(RoundedCornerShape(cornerRadius))
+                .background(if (isDone) colors.habits else Color.Transparent)
+                .border(
+                  width = 1.5.dp,
+                  color = if (isDone) colors.habits else colors.textSecondary.copy(alpha = 0.6f),
+                  shape = RoundedCornerShape(cornerRadius)
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              if (isDone) {
+                Icon(
+                  imageVector = Icons.Default.Check,
+                  contentDescription = null,
+                  tint = if (colors.isLight) Color.White else colors.background,
+                  modifier = Modifier.size(16.dp)
+                )
+              }
+            }
+
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+              Text(
+                text = habit.title,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                  fontWeight = if (isDone) FontWeight.Medium else FontWeight.Normal
+                ),
+                color = colors.textPrimary
+              )
+
+              // 7-day dot strip per habit
+              if (weekStatus.isNotEmpty()) {
+                Row(
+                  horizontalArrangement = Arrangement.spacedBy(5.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  weekStatus.forEach { doneOnDay ->
+                    Box(
+                      modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(
+                          if (doneOnDay) colors.habits else colors.divider
+                        )
                     )
                   }
                 }
               }
             }
           }
+
+          IconButton(
+            onClick = { onDeleteHabit(habit.id) },
+            modifier = Modifier.size(48.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Close,
+              contentDescription = "Remove ${habit.title}",
+              tint = colors.textSecondary,
+              modifier = Modifier.size(18.dp)
+            )
+          }
+        }
+
+        if (idx < habits.lastIndex) {
+          HorizontalDivider(color = colors.divider)
         }
       }
     }
@@ -1573,605 +2260,467 @@ private fun HydrationPillarCard(
 }
 
 @Composable
-private fun SleepPillarCard(
-  sleepRecord: com.example.data.model.SleepRecord?,
-  targetHours: Float,
-  onOpenLogSleepDialog: () -> Unit
+private fun OneMinuteResetBreathing(
+  isActive: Boolean,
+  reduceMotion: Boolean,
+  onToggle: () -> Unit,
+  onComplete: () -> Unit
 ) {
-  val hasSleepLogged = sleepRecord != null
-  val durationHours = if (hasSleepLogged) sleepRecord!!.durationMinutes / 60f else 0f
-  val hoursInt = (durationHours).toInt()
-  val minutesInt = ((durationHours - hoursInt) * 60).toInt()
+  val colors = MaterialTheme.kinetiqColors
+  var phaseLabel by remember { mutableStateOf("Inhale") }
+  var secondsLeftInPhase by remember { mutableIntStateOf(4) }
+  var totalSecondsLeft by remember { mutableIntStateOf(60) }
+  val breathScale = remember { Animatable(0.72f) }
 
-  val animSleepProgress by animateFloatAsState(
-    targetValue = (durationHours / targetHours).coerceIn(0f, 1f),
-    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
-    label = "anim_sleep_progress"
-  )
+  LaunchedEffect(isActive, reduceMotion) {
+    if (!isActive) {
+      totalSecondsLeft = 60
+      phaseLabel = "Inhale"
+      secondsLeftInPhase = 4
+      breathScale.snapTo(0.72f)
+      return@LaunchedEffect
+    }
 
-  Card(
+    // 6 cycles of 4s in + 6s out = 60 seconds (1-minute reset)
+    for (cycle in 0 until 6) {
+      if (!isActive) break
+      phaseLabel = "Inhale"
+      val inhaleJob = if (!reduceMotion) {
+        launch {
+          breathScale.animateTo(
+            targetValue = 1.0f,
+            animationSpec = tween(durationMillis = 4000, easing = FastOutSlowInEasing)
+          )
+        }
+      } else null
+      for (sec in 4 downTo 1) {
+        secondsLeftInPhase = sec
+        totalSecondsLeft = (5 - cycle) * 10 + 6 + sec
+        delay(1000)
+      }
+      inhaleJob?.join()
+
+      phaseLabel = "Exhale"
+      val exhaleJob = if (!reduceMotion) {
+        launch {
+          breathScale.animateTo(
+            targetValue = 0.72f,
+            animationSpec = tween(durationMillis = 6000, easing = FastOutSlowInEasing)
+          )
+        }
+      } else null
+      for (sec in 6 downTo 1) {
+        secondsLeftInPhase = sec
+        totalSecondsLeft = (5 - cycle) * 10 + sec
+        delay(1000)
+      }
+      exhaleJob?.join()
+    }
+    onComplete()
+  }
+
+  Surface(
+    shape = RoundedCornerShape(24.dp),
+    color = colors.surface2,
     modifier = Modifier
       .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = KinetiqBorderSubtle,
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+      .testTag("resonance_breathing_card")
   ) {
-    Column(modifier = Modifier.padding(20.dp)) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp)
+    ) {
       Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+          .fillMaxWidth()
+          .heightIn(min = 48.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
           Box(
             modifier = Modifier
-              .size(42.dp)
-              .background(DuskIndigo.copy(alpha = 0.15f), CircleShape),
+              .size(36.dp)
+              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), CircleShape),
             contentAlignment = Alignment.Center
           ) {
             Icon(
-              imageVector = Icons.Default.Bedtime,
+              imageVector = Icons.Default.Spa,
               contentDescription = null,
-              tint = DuskIndigo
+              tint = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.size(18.dp)
             )
           }
-          Spacer(modifier = Modifier.width(12.dp))
           Column {
             Text(
-              text = "CIRCADIAN RESTORATION",
-              style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
-                fontSize = 10.sp
-              ),
-              color = DuskIndigo
+              text = "1-minute reset",
+              style = MaterialTheme.typography.titleMedium,
+              color = colors.textPrimary
             )
             Text(
-              text = "Target: ${String.format(Locale.US, "%.1f", targetHours)} hours",
-              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextWhite
+              text = if (isActive) "${totalSecondsLeft}s remaining" else "4s inhale · 6s exhale",
+              style = MaterialTheme.typography.labelMedium,
+              color = colors.textSecondary
             )
           }
         }
 
-        Button(
-          onClick = onOpenLogSleepDialog,
-          shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = DuskIndigo,
-            contentColor = KinetiqBlack
-          ),
-          modifier = Modifier.bounceClick { onOpenLogSleepDialog() }
+        Surface(
+          shape = RoundedCornerShape(50),
+          color = if (isActive) colors.surface3 else MaterialTheme.colorScheme.primary,
+          modifier = Modifier
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onToggle)
+            .testTag("breathing_play_toggle")
         ) {
-          Text(if (hasSleepLogged) "Update" else "Log Sleep", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+          Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 18.dp)
+          ) {
+            Text(
+              text = if (isActive) "Stop" else "Start",
+              style = MaterialTheme.typography.labelLarge,
+              color = if (isActive) colors.textPrimary else MaterialTheme.colorScheme.onPrimary
+            )
+          }
         }
       }
 
-      Spacer(modifier = Modifier.height(16.dp))
-
-      if (hasSleepLogged) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.Bottom
-        ) {
-          Column {
-            Text(
-              text = "${hoursInt}h ${minutesInt}m",
-              style = MaterialTheme.typography.headlineMedium.copy(
-                fontWeight = FontWeight.Black,
-                color = DuskIndigo,
-                fontSize = 32.sp
-              )
-            )
-            Text(
-              text = if (sleepRecord!!.notes.isNotBlank()) sleepRecord.notes else "Restful morning logged",
-              style = MaterialTheme.typography.labelSmall,
-              color = KinetiqTextMuted
-            )
-          }
-
-          // Star rating
-          Row {
-            for (i in 1..5) {
-              Icon(
-                imageVector = if (i <= sleepRecord!!.qualityRating) Icons.Default.Star else Icons.Outlined.StarBorder,
-                contentDescription = null,
-                tint = if (i <= sleepRecord.qualityRating) RadiantAmber else KinetiqBorderSubtle,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        LinearProgressIndicator(
-          progress = { animSleepProgress },
+      AnimatedVisibility(
+        visible = isActive,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+      ) {
+        Column(
           modifier = Modifier
             .fillMaxWidth()
-            .height(8.dp)
-            .clip(RoundedCornerShape(4.dp)),
-          color = DuskIndigo,
-          trackColor = DuskIndigo.copy(alpha = 0.15f)
-        )
-      } else {
-        Surface(
-          modifier = Modifier.fillMaxWidth(),
-          shape = RoundedCornerShape(14.dp),
-          color = KinetiqObsidianSurface,
-          border = androidx.compose.foundation.BorderStroke(0.8.dp, KinetiqBorderSubtle)
+            .padding(top = 20.dp, bottom = 8.dp),
+          horizontalAlignment = Alignment.CenterHorizontally,
+          verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = "No sleep recorded for last night. Tap 'Log Sleep' to track your bedtime and restorative quality.",
-              style = MaterialTheme.typography.bodySmall,
-              color = KinetiqTextMuted
-            )
-          }
-        }
-      }
-    }
-  }
-}
-
-@Composable
-private fun HabitsPillarCard(
-  habits: List<Habit>,
-  completedHabitIds: Set<Long>,
-  onToggleHabit: (Long) -> Unit,
-  onOpenAddHabitDialog: () -> Unit,
-  onDeleteHabit: (Long) -> Unit
-) {
-  val completedCount = habits.count { completedHabitIds.contains(it.id) }
-  val total = habits.size
-  val haptic = LocalHapticFeedback.current
-
-  Card(
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = KinetiqBorderSubtle,
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
-  ) {
-    Column(modifier = Modifier.padding(20.dp)) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
           Box(
-            modifier = Modifier
-              .size(42.dp)
-              .background(RadiantAmber.copy(alpha = 0.15f), CircleShape),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(136.dp)
           ) {
-            Icon(
-              imageVector = Icons.Default.SelfImprovement,
-              contentDescription = null,
-              tint = RadiantAmber
+            Box(
+              modifier = Modifier
+                .size(132.dp)
+                .scale(breathScale.value)
+                .background(
+                  color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                  shape = CircleShape
+                )
+            )
+            Box(
+              modifier = Modifier
+                .size(86.dp)
+                .scale(breathScale.value)
+                .background(
+                  color = MaterialTheme.colorScheme.primary.copy(alpha = 0.28f),
+                  shape = CircleShape
+                )
+            )
+            Text(
+              text = "$secondsLeftInPhase",
+              style = KinetiqValueTextStyle.copy(fontSize = 24.sp),
+              color = colors.textPrimary
             )
           }
-          Spacer(modifier = Modifier.width(12.dp))
-          Column {
-            Text(
-              text = "HABIT STACK",
-              style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp,
-                fontSize = 10.sp
-              ),
-              color = RadiantAmber
-            )
-            Text(
-              text = "$completedCount of $total completed today",
-              style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextWhite
-            )
-          }
-        }
 
-        IconButton(
-          onClick = onOpenAddHabitDialog,
-          modifier = Modifier
-            .size(38.dp)
-            .background(KinetiqObsidianSurface, CircleShape)
-            .border(0.8.dp, KinetiqBorderSubtle, CircleShape)
-            .testTag("add_habit_button")
-            .bounceClick { onOpenAddHabitDialog() }
-        ) {
-          Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Add custom habit",
-            tint = RadiantAmber,
-            modifier = Modifier.size(20.dp)
+          Text(
+            text = phaseLabel,
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.textPrimary
           )
         }
       }
-
-      Spacer(modifier = Modifier.height(14.dp))
-
-      if (habits.isEmpty()) {
-        Text(
-          text = "No active rituals configured. Tap '+' to create your first sustainable daily anchor.",
-          style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
-        )
-      } else {
-        habits.forEach { habit ->
-          val isDone = completedHabitIds.contains(habit.id)
-          Surface(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(vertical = 4.dp)
-              .border(
-                width = 0.8.dp,
-                color = if (isDone) RadiantAmber.copy(alpha = 0.4f) else KinetiqBorderSubtle,
-                shape = RoundedCornerShape(14.dp)
-              )
-              .bounceClick(scaleDown = 0.96f) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onToggleHabit(habit.id)
-              },
-            shape = RoundedCornerShape(14.dp),
-            color = if (isDone) RadiantAmber.copy(alpha = 0.12f) else KinetiqObsidianSurface
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Checkbox(
-                  checked = isDone,
-                  onCheckedChange = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onToggleHabit(habit.id)
-                  },
-                  colors = CheckboxDefaults.colors(
-                    checkedColor = RadiantAmber,
-                    checkmarkColor = KinetiqBlack,
-                    uncheckedColor = KinetiqBorderSubtle
-                  )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                  Text(
-                    text = habit.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                      fontWeight = if (isDone) FontWeight.Bold else FontWeight.Medium
-                    ),
-                    color = if (isDone) KinetiqTextWhite else KinetiqTextMuted
-                  )
-                  Text(
-                    text = habit.category.uppercase(Locale.ROOT),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                      fontWeight = FontWeight.Bold,
-                      fontSize = 9.sp,
-                      letterSpacing = 0.8.sp
-                    ),
-                    color = KinetiqTextSubtle
-                  )
-                }
-              }
-
-              IconButton(
-                onClick = { onDeleteHabit(habit.id) },
-                modifier = Modifier
-                  .size(28.dp)
-                  .bounceClick { onDeleteHabit(habit.id) }
-              ) {
-                Icon(
-                  imageVector = Icons.Default.Delete,
-                  contentDescription = "Delete habit",
-                  tint = KinetiqTextSubtle,
-                  modifier = Modifier.size(16.dp)
-                )
-              }
-            }
-          }
-        }
-      }
     }
   }
 }
 
-@Composable
-private fun GentleRemindersCard(
+private data class GentleReminder(
+  val id: String,
+  val text: String,
+  val icon: ImageVector,
+  val accent: Color
+)
+
+private fun buildGentleReminders(
+  colors: KinetiqSemanticColors,
   waterRemainingMl: Int,
-  stepsRemaining: Int
-) {
-  Card(
-    modifier = Modifier
-      .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = KinetiqBorderSubtle,
-        shape = RoundedCornerShape(22.dp)
-      ),
-    shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
-  ) {
-    Column(modifier = Modifier.padding(20.dp)) {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-          imageVector = Icons.Default.NotificationsActive,
-          contentDescription = null,
-          tint = KinetiqPurpleNeon,
-          modifier = Modifier.size(20.dp)
+  stepsRemaining: Int,
+  sleepMinutes: Int,
+  isRestDay: Boolean
+): List<GentleReminder> {
+  return buildList {
+    if (isRestDay) {
+      add(
+        GentleReminder(
+          id = "rest",
+          text = "Rest day active — lighter pace today",
+          icon = Icons.Default.SelfImprovement,
+          accent = colors.habits
         )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-          text = "DAYTIME RECOVERY CUES",
-          style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.2.sp,
-            fontSize = 10.sp
-          ),
-          color = KinetiqPurpleNeon
+      )
+    }
+    if (waterRemainingMl >= 250) {
+      add(
+        GentleReminder(
+          id = "water",
+          text = "$waterRemainingMl ml left to reach today's water goal",
+          icon = Icons.Default.WaterDrop,
+          accent = colors.water
         )
-      }
-
-      Spacer(modifier = Modifier.height(10.dp))
-
-      val reminderTexts = mutableListOf<String>()
-      if (waterRemainingMl > 0) {
-        reminderTexts.add("💧 Hydration telemetry: ~$waterRemainingMl ml remaining to reach your comfortable target.")
-      } else {
-        reminderTexts.add("💧 Hydration complete: You've reached your daily fluid quota. Sip as desired!")
-      }
-
-      if (stepsRemaining > 0) {
-        reminderTexts.add("🚶 Movement momentum: A quick 15-minute stroll bridges your remaining $stepsRemaining steps.")
-      } else {
-        reminderTexts.add("🚶 Movement complete: Step baseline conquered with steady pace!")
-      }
-      reminderTexts.add("🌙 Digital sunset: Lower ambient illumination 45 mins prior to sleep for natural melatonin peak.")
-
-      reminderTexts.forEach { text ->
-        Text(
-          text = text,
-          style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted,
-          modifier = Modifier.padding(vertical = 4.dp),
-          lineHeight = 18.sp
+      )
+    }
+    if (!isRestDay && stepsRemaining >= 500) {
+      add(
+        GentleReminder(
+          id = "steps",
+          text = "${formatStepCount(stepsRemaining)} steps to go today",
+          icon = Icons.Default.DirectionsWalk,
+          accent = colors.steps
         )
-      }
+      )
+    }
+    if (sleepMinutes <= 0) {
+      add(
+        GentleReminder(
+          id = "sleep",
+          text = "Last night's sleep isn't logged yet",
+          icon = Icons.Default.Bedtime,
+          accent = colors.sleep
+        )
+      )
     }
   }
 }
 
 @Composable
-private fun StatMiniMetric(value: String, label: String) {
-  Column(horizontalAlignment = Alignment.CenterHorizontally) {
-    Text(
-      text = value,
-      style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-      color = KinetiqTextWhite
-    )
-    Text(
-      text = label.uppercase(Locale.ROOT),
-      style = MaterialTheme.typography.labelSmall.copy(
-        fontSize = 9.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.5.sp
-      ),
-      color = KinetiqTextSubtle
-    )
-  }
-}
-
-// ------------------- DIALOGS -------------------
-
-@Composable
-fun AddWaterCustomDialog(
-  onDismiss: () -> Unit,
-  onConfirm: (Int, String) -> Unit
+private fun GentleRemindersList(
+  reminders: List<GentleReminder>,
+  onDismissReminder: (String) -> Unit
 ) {
-  var amountText by remember { mutableStateOf("300") }
-  var containerType by remember { mutableStateOf("Glass") }
-
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    containerColor = KinetiqElevatedCard,
-    titleContentColor = KinetiqTextWhite,
-    textContentColor = KinetiqTextMuted,
-    title = { Text("Custom Fluid Intake") },
-    text = {
-      Column {
-        Text("Volume in milliliters (ml):")
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-          value = amountText,
-          onValueChange = { amountText = it.filter { char -> char.isDigit() } },
-          keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("Vessel Type:")
+  val colors = MaterialTheme.kinetiqColors
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    reminders.forEach { item ->
+      Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = colors.surface2,
+        modifier = Modifier.fillMaxWidth()
+      ) {
         Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          listOf("Glass", "Bottle", "Mug").forEach { type ->
-            FilterChip(
-              selected = containerType == type,
-              onClick = { containerType = type },
-              label = { Text(type, fontSize = 12.sp) }
+          Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            Icon(
+              imageVector = item.icon,
+              contentDescription = null,
+              tint = item.accent,
+              modifier = Modifier.size(17.dp)
+            )
+            Text(
+              text = item.text,
+              style = MaterialTheme.typography.bodyMedium,
+              color = colors.textSecondary
+            )
+          }
+
+          IconButton(
+            onClick = { onDismissReminder(item.id) },
+            modifier = Modifier.size(48.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Close,
+              contentDescription = "Dismiss reminder",
+              tint = colors.textSecondary,
+              modifier = Modifier.size(16.dp)
             )
           }
         }
       }
-    },
-    confirmButton = {
-      Button(
-        onClick = {
-          val amount = amountText.toIntOrNull() ?: 0
-          if (amount > 0) onConfirm(amount, containerType)
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = BioCyan, contentColor = KinetiqBlack)
-      ) {
-        Text("Log Intake", fontWeight = FontWeight.Bold)
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel", color = KinetiqTextMuted)
-      }
     }
-  )
+  }
 }
 
 @Composable
-fun LogSleepDialog(
-  onDismiss: () -> Unit,
-  onConfirm: (Long, Long, Int, String) -> Unit
+private fun LogPickerBottomSheet(
+  onPickWater: () -> Unit,
+  onPickSteps: () -> Unit,
+  onPickSleep: () -> Unit,
+  onPickHabit: () -> Unit,
+  onDismiss: () -> Unit
 ) {
-  var sleepHoursFloat by remember { mutableFloatStateOf(7.5f) }
-  var rating by remember { mutableIntStateOf(4) }
-  var notes by remember { mutableStateOf("Felt calm and rested") }
+  val colors = MaterialTheme.kinetiqColors
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-  AlertDialog(
+  ModalBottomSheet(
     onDismissRequest = onDismiss,
-    containerColor = KinetiqElevatedCard,
-    titleContentColor = KinetiqTextWhite,
-    textContentColor = KinetiqTextMuted,
-    title = { Text("Log Circadian Sleep") },
-    text = {
-      Column {
-        Text(
-          text = "Duration: ${String.format(Locale.US, "%.1f", sleepHoursFloat)} hours",
-          style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-          color = KinetiqTextWhite
-        )
-        Slider(
-          value = sleepHoursFloat,
-          onValueChange = { sleepHoursFloat = it },
-          valueRange = 3f..12f,
-          steps = 17
-        )
+    sheetState = sheetState,
+    containerColor = colors.surface1,
+    contentColor = colors.textPrimary
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp)
+        .padding(bottom = 28.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+      Text(
+        text = "Log for today",
+        style = MaterialTheme.typography.titleLarge,
+        color = colors.textPrimary,
+        modifier = Modifier.padding(bottom = 4.dp)
+      )
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-          text = "Recovery Rating (1–5 Stars):",
-          style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-          color = KinetiqTextWhite
-        )
-        Row(
-          modifier = Modifier.padding(vertical = 4.dp),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-          for (i in 1..5) {
-            IconButton(
-              onClick = { rating = i },
-              modifier = Modifier.size(36.dp)
-            ) {
-              Icon(
-                imageVector = if (i <= rating) Icons.Default.Star else Icons.Outlined.StarBorder,
-                contentDescription = "$i stars",
-                tint = if (i <= rating) RadiantAmber else KinetiqBorderSubtle
-              )
-            }
-          }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text("Wake feeling notes:")
-        OutlinedTextField(
-          value = notes,
-          onValueChange = { notes = it },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-      }
-    },
-    confirmButton = {
-      Button(
-        onClick = {
-          val now = System.currentTimeMillis()
-          val durationMillis = (sleepHoursFloat * 3600 * 1000).toLong()
-          val bedtime = now - durationMillis
-          onConfirm(bedtime, now, rating, notes)
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = DuskIndigo, contentColor = KinetiqBlack)
-      ) {
-        Text("Save Record", fontWeight = FontWeight.Bold)
-      }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel", color = KinetiqTextMuted)
-      }
+      LogSheetOptionRow(
+        icon = Icons.Default.WaterDrop,
+        title = "Water",
+        subtitle = "Add custom ml or container",
+        accent = colors.water,
+        onClick = onPickWater
+      )
+      HorizontalDivider(color = colors.divider)
+      LogSheetOptionRow(
+        icon = Icons.Default.DirectionsWalk,
+        title = "Steps",
+        subtitle = "Add steps or manage live counter",
+        accent = colors.steps,
+        onClick = onPickSteps
+      )
+      HorizontalDivider(color = colors.divider)
+      LogSheetOptionRow(
+        icon = Icons.Default.Bedtime,
+        title = "Sleep",
+        subtitle = "Log hours slept and quality",
+        accent = colors.sleep,
+        onClick = onPickSleep
+      )
+      HorizontalDivider(color = colors.divider)
+      LogSheetOptionRow(
+        icon = Icons.Default.SelfImprovement,
+        title = "Habit",
+        subtitle = "Create a new daily habit",
+        accent = colors.habits,
+        onClick = onPickHabit
+      )
     }
-  )
+  }
 }
 
 @Composable
-fun AddHabitDialog(
+private fun LogSheetOptionRow(
+  icon: ImageVector,
+  title: String,
+  subtitle: String,
+  accent: Color,
+  onClick: () -> Unit
+) {
+  val colors = MaterialTheme.kinetiqColors
+  Row(
+    modifier = Modifier
+      .fillMaxWidth()
+      .heightIn(min = 56.dp)
+      .clip(RoundedCornerShape(14.dp))
+      .clickable(onClick = onClick)
+      .padding(horizontal = 8.dp, vertical = 10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(14.dp)
+  ) {
+    Box(
+      modifier = Modifier
+        .size(38.dp)
+        .background(accent.copy(alpha = 0.14f), CircleShape),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = accent,
+        modifier = Modifier.size(19.dp)
+      )
+    }
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+        color = colors.textPrimary
+      )
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.labelMedium,
+        color = colors.textSecondary
+      )
+    }
+  }
+}
+
+@Composable
+private fun CalmAddHabitDialog(
   onDismiss: () -> Unit,
   onConfirm: (String, String, String) -> Unit
 ) {
+  val colors = MaterialTheme.kinetiqColors
   var title by remember { mutableStateOf("") }
   var category by remember { mutableStateOf("Mindfulness") }
+  val categories = listOf("Mindfulness", "Movement", "Hydration", "Rest")
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    containerColor = KinetiqElevatedCard,
-    titleContentColor = KinetiqTextWhite,
-    textContentColor = KinetiqTextMuted,
-    title = { Text("Anchor New Habit") },
+    containerColor = colors.surface1,
+    titleContentColor = colors.textPrimary,
+    textContentColor = colors.textPrimary,
+    title = {
+      Text("Add habit", style = MaterialTheme.typography.titleLarge)
+    },
     text = {
-      Column {
-        Text("Habit Name:")
-        Spacer(modifier = Modifier.height(6.dp))
+      Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
           value = title,
           onValueChange = { title = it },
-          placeholder = { Text("e.g. 10-min Posture Walk") },
+          label = { Text("Habit name") },
           singleLine = true,
           modifier = Modifier.fillMaxWidth()
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text("Category Domain:")
-        Spacer(modifier = Modifier.height(6.dp))
-        val categories = listOf("Movement", "Hydration", "Rest", "Mindfulness", "Nutrition")
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-          Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            categories.take(3).forEach { cat ->
-              FilterChip(
-                selected = category == cat,
-                onClick = { category = cat },
-                label = { Text(cat, fontSize = 11.sp) }
-              )
-            }
-          }
-          Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            categories.drop(3).forEach { cat ->
-              FilterChip(
-                selected = category == cat,
-                onClick = { category = cat },
-                label = { Text(cat, fontSize = 11.sp) }
-              )
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          categories.forEach { cat ->
+            val selected = cat == category
+            Surface(
+              shape = RoundedCornerShape(50),
+              color = if (selected) colors.habits.copy(alpha = 0.2f) else colors.surface2,
+              modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 40.dp)
+                .clip(RoundedCornerShape(50))
+                .clickable { category = cat }
+            ) {
+              Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp)) {
+                Text(
+                  text = cat,
+                  style = MaterialTheme.typography.labelSmall,
+                  color = if (selected) colors.habits else colors.textSecondary,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
             }
           }
         }
@@ -2180,19 +2729,26 @@ fun AddHabitDialog(
     confirmButton = {
       Button(
         onClick = {
-          if (title.isNotBlank()) {
-            onConfirm(title.trim(), category, "self_improvement")
+          val trimmed = title.trim()
+          if (trimmed.isNotEmpty()) {
+            onConfirm(trimmed, category, "SelfImprovement")
           }
         },
-        colors = ButtonDefaults.buttonColors(containerColor = RadiantAmber, contentColor = KinetiqBlack)
+        enabled = title.trim().isNotEmpty(),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier.heightIn(min = 48.dp)
       ) {
-        Text("Save Ritual", fontWeight = FontWeight.Bold)
+        Text("Add habit")
       }
     },
     dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel", color = KinetiqTextMuted)
+      TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) {
+        Text("Cancel", color = colors.textSecondary)
       }
     }
   )
 }
+

@@ -54,23 +54,14 @@ import com.example.data.education.EducationLibrary
 import com.example.data.education.HealthArticle
 import com.example.ui.components.MedicalDisclaimerBanner
 import com.example.ui.components.bounceClick
-import com.example.ui.theme.KinetiqBlack
-import com.example.ui.theme.KinetiqBorderGlow
-import com.example.ui.theme.KinetiqBorderSubtle
-import com.example.ui.theme.KinetiqCardSurface
-import com.example.ui.theme.KinetiqElevatedCard
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqPurpleLavender
-import com.example.ui.theme.KinetiqPurpleNeon
-import com.example.ui.theme.KinetiqPurplePrimary
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
+import com.example.ui.theme.kinetiqColors
 
 @Composable
 fun LearnScreen(modifier: Modifier = Modifier) {
   var selectedCategory by remember { mutableStateOf("All") }
   var selectedArticle by remember { mutableStateOf<HealthArticle?>(null) }
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
 
   val categories = EducationLibrary.getCategories()
   val filteredArticles = EducationLibrary.getArticlesByCategory(selectedCategory)
@@ -86,13 +77,13 @@ fun LearnScreen(modifier: Modifier = Modifier) {
         Box(
           modifier = Modifier
             .size(42.dp)
-            .background(KinetiqPurplePrimary.copy(alpha = 0.2f), CircleShape),
+            .background(colorScheme.primary.copy(alpha = 0.16f), CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = Icons.Default.MenuBook,
             contentDescription = null,
-            tint = KinetiqPurpleNeon
+            tint = colorScheme.primary
           )
         }
         Spacer(modifier = Modifier.width(12.dp))
@@ -101,13 +92,13 @@ fun LearnScreen(modifier: Modifier = Modifier) {
             text = "KinetiQ Health Library",
             style = MaterialTheme.typography.titleLarge.copy(
               fontWeight = FontWeight.Black,
-              color = KinetiqTextWhite
+              color = colorScheme.onBackground
             )
           )
           Text(
             text = "Evidence-based clinical guidelines reviewed against authoritative sources.",
             style = MaterialTheme.typography.bodySmall,
-            color = KinetiqTextMuted
+            color = colorScheme.onSurfaceVariant
           )
         }
       }
@@ -123,16 +114,15 @@ fun LearnScreen(modifier: Modifier = Modifier) {
           FilterChip(
             selected = isSelected,
             onClick = { selectedCategory = cat },
-            label = { Text(cat, fontSize = 12.sp, color = if (isSelected) KinetiqBlack else KinetiqTextWhite) },
+            label = { Text(cat, fontSize = 12.sp, color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface) },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = KinetiqPurpleNeon,
-              containerColor = KinetiqObsidianSurface
+              selectedContainerColor = colorScheme.primary,
+              containerColor = semanticColors.surface1
             ),
             border = androidx.compose.foundation.BorderStroke(
               0.8.dp,
-              if (isSelected) KinetiqPurpleNeon else KinetiqBorderSubtle
-            ),
-            modifier = Modifier.bounceClick(scaleDown = 0.92f) { selectedCategory = cat }
+              if (isSelected) colorScheme.primary else colorScheme.outline
+            )
           )
         }
       }
@@ -165,13 +155,15 @@ private fun ArticleCard(
   article: HealthArticle,
   onClick: () -> Unit
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, KinetiqBorderSubtle, RoundedCornerShape(22.dp))
+      .border(1.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(22.dp))
       .bounceClick(scaleDown = 0.97f) { onClick() },
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(
@@ -181,8 +173,8 @@ private fun ArticleCard(
       ) {
         Surface(
           shape = RoundedCornerShape(8.dp),
-          color = KinetiqObsidianSurface,
-          border = androidx.compose.foundation.BorderStroke(0.8.dp, KinetiqBorderSubtle)
+          color = semanticColors.surface2,
+          border = androidx.compose.foundation.BorderStroke(0.8.dp, colorScheme.outline.copy(alpha = 0.65f))
         ) {
           Text(
             text = article.category.uppercase(),
@@ -191,7 +183,7 @@ private fun ArticleCard(
               letterSpacing = 1.sp,
               fontSize = 9.sp
             ),
-            color = KinetiqPurpleNeon,
+            color = colorScheme.primary,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
           )
         }
@@ -200,14 +192,14 @@ private fun ArticleCard(
           Icon(
             imageVector = Icons.Default.AccessTime,
             contentDescription = null,
-            tint = KinetiqTextSubtle,
+            tint = colorScheme.onSurfaceVariant,
             modifier = Modifier.size(13.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
           Text(
             text = "${article.readTimeMinutes} min read",
             style = MaterialTheme.typography.labelSmall,
-            color = KinetiqTextSubtle
+            color = colorScheme.onSurfaceVariant
           )
         }
       }
@@ -217,7 +209,7 @@ private fun ArticleCard(
       Text(
         text = article.title,
         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        color = KinetiqTextWhite
+        color = colorScheme.onSurface
       )
 
       Spacer(modifier = Modifier.height(6.dp))
@@ -225,7 +217,7 @@ private fun ArticleCard(
       Text(
         text = article.summary,
         style = MaterialTheme.typography.bodySmall,
-        color = KinetiqTextMuted,
+        color = colorScheme.onSurfaceVariant,
         lineHeight = 18.sp
       )
 
@@ -238,14 +230,14 @@ private fun ArticleCard(
         Icon(
           imageVector = Icons.Default.Verified,
           contentDescription = null,
-          tint = KinetiqPurpleNeon,
+          tint = colorScheme.primary,
           modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
           text = "Clinical Review: ${article.lastReviewedDate} • ${article.sourceOrg}",
           style = MaterialTheme.typography.labelSmall,
-          color = KinetiqTextSubtle,
+          color = colorScheme.onSurfaceVariant,
           maxLines = 1
         )
       }
@@ -258,11 +250,13 @@ private fun ArticleReaderDialog(
   article: HealthArticle,
   onDismiss: () -> Unit
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   AlertDialog(
     onDismissRequest = onDismiss,
-    containerColor = KinetiqElevatedCard,
-    titleContentColor = KinetiqTextWhite,
-    textContentColor = KinetiqTextWhite,
+    containerColor = colorScheme.surfaceContainerHigh,
+    titleContentColor = colorScheme.onSurface,
+    textContentColor = colorScheme.onSurface,
     title = {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -275,7 +269,7 @@ private fun ArticleReaderDialog(
           modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onDismiss) {
-          Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = KinetiqTextMuted)
+          Icon(imageVector = Icons.Default.Close, contentDescription = "Close", tint = colorScheme.onSurfaceVariant)
         }
       }
     },
@@ -289,14 +283,14 @@ private fun ArticleReaderDialog(
           Icon(
             imageVector = Icons.Default.Verified,
             contentDescription = null,
-            tint = KinetiqPurpleNeon,
+            tint = colorScheme.primary,
             modifier = Modifier.size(16.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "Clinical Review Date: ${article.lastReviewedDate}",
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = KinetiqPurpleLavender
+            color = colorScheme.primary
           )
         }
 
@@ -305,7 +299,7 @@ private fun ArticleReaderDialog(
         Text(
           text = article.fullContent,
           style = MaterialTheme.typography.bodyMedium,
-          color = KinetiqTextWhite,
+          color = colorScheme.onSurface,
           lineHeight = 22.sp
         )
 
@@ -313,22 +307,22 @@ private fun ArticleReaderDialog(
 
         Surface(
           shape = RoundedCornerShape(14.dp),
-          color = KinetiqObsidianSurface,
-          border = androidx.compose.foundation.BorderStroke(1.dp, KinetiqBorderGlow.copy(alpha = 0.4f)),
+          color = semanticColors.surface1,
+          border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.65f)),
           modifier = Modifier.fillMaxWidth()
         ) {
           Column(modifier = Modifier.padding(14.dp)) {
             Text(
               text = "Key Clinical Takeaways:",
               style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqPurpleNeon
+              color = colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
             article.keyTakeaways.forEach { takeaway ->
               Text(
                 text = "✓ $takeaway",
                 style = MaterialTheme.typography.bodySmall,
-                color = KinetiqTextWhite,
+                color = colorScheme.onSurface,
                 modifier = Modifier.padding(vertical = 2.dp)
               )
             }
@@ -339,20 +333,20 @@ private fun ArticleReaderDialog(
 
         Surface(
           shape = RoundedCornerShape(12.dp),
-          color = KinetiqObsidianSurface,
-          border = androidx.compose.foundation.BorderStroke(0.6.dp, KinetiqBorderSubtle),
+          color = semanticColors.surface1,
+          border = androidx.compose.foundation.BorderStroke(0.6.dp, colorScheme.outline.copy(alpha = 0.5f)),
           modifier = Modifier.fillMaxWidth()
         ) {
           Column(modifier = Modifier.padding(12.dp)) {
             Text(
               text = "Authoritative Source & Reference:",
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextSubtle
+              color = colorScheme.onSurfaceVariant
             )
             Text(
               text = "${article.sourceOrg}\n${article.sourceReference}",
               style = MaterialTheme.typography.labelSmall,
-              color = KinetiqTextMuted
+              color = colorScheme.onSurfaceVariant
             )
           }
         }
@@ -362,8 +356,8 @@ private fun ArticleReaderDialog(
       Button(
         onClick = onDismiss,
         colors = ButtonDefaults.buttonColors(
-          containerColor = KinetiqPurpleNeon,
-          contentColor = KinetiqBlack
+          containerColor = colorScheme.primary,
+          contentColor = colorScheme.onPrimary
         )
       ) {
         Text("Done Reading", fontWeight = FontWeight.Bold)

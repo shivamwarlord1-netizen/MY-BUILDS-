@@ -74,19 +74,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.UserProfile
 import com.example.ui.components.MedicalDisclaimerBanner
 import com.example.ui.components.bounceClick
-import com.example.ui.theme.KinetiqBlack
-import com.example.ui.theme.KinetiqBorderGlow
-import com.example.ui.theme.KinetiqBorderSubtle
-import com.example.ui.theme.KinetiqCardSurface
-import com.example.ui.theme.KinetiqElevatedCard
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqPurpleDeep
-import com.example.ui.theme.KinetiqPurpleLavender
-import com.example.ui.theme.KinetiqPurpleNeon
-import com.example.ui.theme.KinetiqPurplePrimary
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
+import com.example.ui.theme.kinetiqColors
 import com.example.ui.viewmodel.WellnessUiState
 import com.example.ui.viewmodel.WellnessViewModel
 import java.util.Locale
@@ -99,6 +87,8 @@ fun SettingsScreen(
 ) {
   val context = LocalContext.current
   val profile = uiState.userProfile
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
 
   var showEditProfileDialog by remember { mutableStateOf(false) }
   var showExportDialog by remember { mutableStateOf(false) }
@@ -121,19 +111,19 @@ fun SettingsScreen(
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.5.sp
           ),
-          color = KinetiqPurpleNeon
+          color = colorScheme.primary
         )
         Text(
           text = if (profile.language == "hi") "सेटिंग्स और गोपनीयता" else "KinetiQ Settings",
           style = MaterialTheme.typography.headlineSmall.copy(
             fontWeight = FontWeight.Black,
-            color = KinetiqTextWhite
+            color = colorScheme.onBackground
           )
         )
         Text(
           text = if (profile.language == "hi") "व्यक्तिगत लक्ष्य, थीम और ऑन-डिवाइस डेटा नियंत्रण।" else "Personal telemetry targets, premium themes, and on-device data sovereignty.",
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
+          color = colorScheme.onSurfaceVariant
         )
       }
     }
@@ -159,13 +149,13 @@ fun SettingsScreen(
               text = safeName,
               style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.Bold,
-                color = KinetiqTextWhite
+                color = colorScheme.onSurface
               )
             )
             Text(
               text = "Steps: ${profile.targetSteps} • Water: ${profile.targetWaterMl}ml • Sleep: ${profile.targetSleepHours}h",
               style = MaterialTheme.typography.bodySmall,
-              color = KinetiqTextMuted
+              color = colorScheme.onSurfaceVariant
             )
           }
 
@@ -173,8 +163,8 @@ fun SettingsScreen(
             onClick = { showEditProfileDialog = true },
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-              containerColor = KinetiqPurpleNeon,
-              contentColor = KinetiqBlack
+              containerColor = colorScheme.primary,
+              contentColor = colorScheme.onPrimary
             ),
             modifier = Modifier
               .testTag("edit_targets_button")
@@ -195,21 +185,22 @@ fun SettingsScreen(
         Text(
           text = "Select your preferred visual aesthetic:",
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
+          color = colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(10.dp))
-        androidx.compose.foundation.lazy.LazyRow(
+        LazyRow(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           val themes = listOf(
             "dark" to "Obsidian Purple",
             "ruby" to "Ruby Velvet (Red)",
-            "system" to "System Auto",
-            "light" to "Twilight Light"
+            "simple" to "Simple",
+            "light" to "Twilight Light",
+            "system" to "System Auto"
           )
           items(themes) { (code, label) ->
-            val isSelected = profile.darkModeSetting == code
+            val isSelected = profile.darkModeSetting.equals(code, ignoreCase = true)
             FilterChip(
               selected = isSelected,
               onClick = { viewModel.updateUserProfile(profile.copy(darkModeSetting = code)) },
@@ -217,20 +208,19 @@ fun SettingsScreen(
                 Text(
                   text = label,
                   fontSize = 11.sp,
-                  color = if (isSelected) KinetiqBlack else KinetiqTextWhite
+                  fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                  color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface
                 )
               },
               colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary,
-                containerColor = KinetiqObsidianSurface
+                selectedContainerColor = colorScheme.primary,
+                containerColor = semanticColors.surface1
               ),
               border = androidx.compose.foundation.BorderStroke(
                 0.8.dp,
-                if (isSelected) MaterialTheme.colorScheme.primary else KinetiqBorderSubtle
+                if (isSelected) colorScheme.primary else colorScheme.outline
               ),
-              modifier = Modifier.bounceClick(scaleDown = 0.92f) {
-                viewModel.updateUserProfile(profile.copy(darkModeSetting = code))
-              }
+              modifier = Modifier.testTag("theme_chip_$code")
             )
           }
         }
@@ -246,7 +236,7 @@ fun SettingsScreen(
         Text(
           text = if (profile.language == "hi") "अपनी पसंदीदा भाषा चुनें:" else "Choose companion language:",
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
+          color = colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -255,22 +245,22 @@ fun SettingsScreen(
           FilterChip(
             selected = isEn,
             onClick = { viewModel.updateUserProfile(profile.copy(language = "en")) },
-            label = { Text("English", color = if (isEn) KinetiqBlack else KinetiqTextWhite) },
+            label = { Text("English", color = if (isEn) colorScheme.onPrimary else colorScheme.onSurface) },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = KinetiqPurpleNeon,
-              containerColor = KinetiqObsidianSurface
+              selectedContainerColor = colorScheme.primary,
+              containerColor = semanticColors.surface1
             ),
-            border = androidx.compose.foundation.BorderStroke(0.8.dp, if (isEn) KinetiqPurpleNeon else KinetiqBorderSubtle)
+            border = androidx.compose.foundation.BorderStroke(0.8.dp, if (isEn) colorScheme.primary else colorScheme.outline)
           )
           FilterChip(
             selected = isHi,
             onClick = { viewModel.updateUserProfile(profile.copy(language = "hi")) },
-            label = { Text("हिंदी (Hindi)", color = if (isHi) KinetiqBlack else KinetiqTextWhite) },
+            label = { Text("हिंदी (Hindi)", color = if (isHi) colorScheme.onPrimary else colorScheme.onSurface) },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = KinetiqPurpleNeon,
-              containerColor = KinetiqObsidianSurface
+              selectedContainerColor = colorScheme.primary,
+              containerColor = semanticColors.surface1
             ),
-            border = androidx.compose.foundation.BorderStroke(0.8.dp, if (isHi) KinetiqPurpleNeon else KinetiqBorderSubtle)
+            border = androidx.compose.foundation.BorderStroke(0.8.dp, if (isHi) colorScheme.primary else colorScheme.outline)
           )
         }
       }
@@ -292,13 +282,13 @@ fun SettingsScreen(
               text = if (profile.language == "hi") "अनुस्मारक सक्षम करें" else "Enable Daytime Telemetry Cues",
               style = MaterialTheme.typography.bodyMedium.copy(
                 fontWeight = FontWeight.SemiBold,
-                color = KinetiqTextWhite
+                color = colorScheme.onSurface
               )
             )
             Text(
               text = "On-device reminders for hydration sips and evening digital wind-down",
               style = MaterialTheme.typography.bodySmall,
-              color = KinetiqTextMuted
+              color = colorScheme.onSurfaceVariant
             )
           }
           Switch(
@@ -307,10 +297,10 @@ fun SettingsScreen(
               viewModel.updateUserProfile(profile.copy(notificationsEnabled = isEnabled))
             },
             colors = SwitchDefaults.colors(
-              checkedThumbColor = KinetiqBlack,
-              checkedTrackColor = KinetiqPurpleNeon,
-              uncheckedThumbColor = KinetiqTextMuted,
-              uncheckedTrackColor = KinetiqObsidianSurface
+              checkedThumbColor = colorScheme.onPrimary,
+              checkedTrackColor = colorScheme.primary,
+              uncheckedThumbColor = colorScheme.onSurfaceVariant,
+              uncheckedTrackColor = semanticColors.surface1
             )
           )
         }
@@ -326,7 +316,7 @@ fun SettingsScreen(
         Text(
           text = "Your health records are stored strictly on this device in SQLite. No tracking, zero cloud telemetry, complete sovereignty.",
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
+          color = colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -347,8 +337,8 @@ fun SettingsScreen(
               }
             },
           colors = ButtonDefaults.buttonColors(
-            containerColor = KinetiqPurpleDeep,
-            contentColor = KinetiqPurpleLavender
+            containerColor = colorScheme.secondaryContainer,
+            contentColor = colorScheme.onSecondaryContainer
           ),
           shape = RoundedCornerShape(12.dp)
         ) {
@@ -367,9 +357,9 @@ fun SettingsScreen(
             .bounceClick { showDeleteConfirmDialog = true },
           shape = RoundedCornerShape(12.dp),
           colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.error
+            contentColor = colorScheme.error
           ),
-          border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+          border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.5f))
         ) {
           Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(8.dp))
@@ -384,6 +374,13 @@ fun SettingsScreen(
         title = "About KinetiQ",
         icon = Icons.Default.Security
       ) {
+        val activeThemeLabel = when (profile.darkModeSetting.lowercase(Locale.ROOT)) {
+          "simple" -> "Simple"
+          "ruby", "red" -> "Ruby Velvet"
+          "light" -> "Twilight Light"
+          "system" -> "System Auto"
+          else -> "Obsidian Dark"
+        }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
           Row(
             modifier = Modifier
@@ -392,8 +389,8 @@ fun SettingsScreen(
               .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Privacy Policy & Zero-Cloud Guarantee", style = MaterialTheme.typography.bodyMedium, color = KinetiqTextWhite)
-            Text("Read", color = KinetiqPurpleNeon, style = MaterialTheme.typography.labelMedium)
+            Text("Privacy Policy & Zero-Cloud Guarantee", style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurface)
+            Text("Read", color = colorScheme.primary, style = MaterialTheme.typography.labelMedium)
           }
 
           Row(
@@ -402,8 +399,8 @@ fun SettingsScreen(
               .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Software Version", style = MaterialTheme.typography.bodyMedium, color = KinetiqTextWhite)
-            Text("KinetiQ 1.0.0 (Obsidian Dark)", color = KinetiqTextMuted, style = MaterialTheme.typography.labelMedium)
+            Text("Software Version", style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurface)
+            Text("KinetiQ 1.0.0 ($activeThemeLabel)", color = colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
           }
 
           Row(
@@ -412,8 +409,8 @@ fun SettingsScreen(
               .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
           ) {
-            Text("Cost Model", style = MaterialTheme.typography.bodyMedium, color = KinetiqTextWhite)
-            Text("100% Free Forever • Zero Ads", color = KinetiqPurpleNeon, style = MaterialTheme.typography.labelMedium)
+            Text("Cost Model", style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurface)
+            Text("100% Free Forever • Zero Ads", color = colorScheme.primary, style = MaterialTheme.typography.labelMedium)
           }
         }
       }
@@ -441,8 +438,8 @@ fun SettingsScreen(
   if (showExportDialog) {
     AlertDialog(
       onDismissRequest = { showExportDialog = false },
-      containerColor = KinetiqElevatedCard,
-      titleContentColor = KinetiqTextWhite,
+      containerColor = colorScheme.surfaceContainerHigh,
+      titleContentColor = colorScheme.onSurface,
       title = { Text("Exported Telemetry (JSON)") },
       text = {
         Column(
@@ -455,7 +452,7 @@ fun SettingsScreen(
             text = exportedJsonText,
             style = MaterialTheme.typography.labelSmall,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-            color = KinetiqTextMuted
+            color = colorScheme.onSurfaceVariant
           )
         }
       },
@@ -468,8 +465,8 @@ fun SettingsScreen(
             showExportDialog = false
           },
           colors = ButtonDefaults.buttonColors(
-            containerColor = KinetiqPurpleNeon,
-            contentColor = KinetiqBlack
+            containerColor = colorScheme.primary,
+            contentColor = colorScheme.onPrimary
           )
         ) {
           Text("Copy to Clipboard", fontWeight = FontWeight.Bold)
@@ -477,7 +474,7 @@ fun SettingsScreen(
       },
       dismissButton = {
         TextButton(onClick = { showExportDialog = false }) {
-          Text("Close", color = KinetiqTextMuted)
+          Text("Close", color = colorScheme.onSurfaceVariant)
         }
       }
     )
@@ -487,13 +484,13 @@ fun SettingsScreen(
   if (showDeleteConfirmDialog) {
     AlertDialog(
       onDismissRequest = { showDeleteConfirmDialog = false },
-      containerColor = KinetiqElevatedCard,
-      titleContentColor = MaterialTheme.colorScheme.error,
+      containerColor = colorScheme.surfaceContainerHigh,
+      titleContentColor = colorScheme.error,
       title = { Text("Erase All Health Data?") },
       text = {
         Text(
           "This will irreversibly delete all recorded steps, hydration logs, sleep records, and habit completions from your local database. Your targets will reset to defaults.",
-          color = KinetiqTextWhite
+          color = colorScheme.onSurface
         )
       },
       confirmButton = {
@@ -502,14 +499,14 @@ fun SettingsScreen(
             viewModel.purgeData()
             showDeleteConfirmDialog = false
           },
-          colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+          colors = ButtonDefaults.buttonColors(containerColor = colorScheme.error)
         ) {
           Text("Confirm Erase")
         }
       },
       dismissButton = {
         TextButton(onClick = { showDeleteConfirmDialog = false }) {
-          Text("Cancel", color = KinetiqTextMuted)
+          Text("Cancel", color = colorScheme.onSurfaceVariant)
         }
       }
     )
@@ -519,8 +516,8 @@ fun SettingsScreen(
   if (showPrivacyPolicyDialog) {
     AlertDialog(
       onDismissRequest = { showPrivacyPolicyDialog = false },
-      containerColor = KinetiqElevatedCard,
-      titleContentColor = KinetiqTextWhite,
+      containerColor = colorScheme.surfaceContainerHigh,
+      titleContentColor = colorScheme.onSurface,
       title = { Text("Privacy Policy & Medical Boundary") },
       text = {
         Column(
@@ -544,7 +541,7 @@ fun SettingsScreen(
               KinetiQ is designed for general lifestyle wellness and personal habit cultivation. It is NOT a medical device, clinical decision support system, or medical diagnostic tool. Never rely on KinetiQ for urgent medical conditions. In emergencies, contact 112 / 911 or visit an emergency room.
             """.trimIndent(),
             style = MaterialTheme.typography.bodySmall,
-            color = KinetiqTextWhite,
+            color = colorScheme.onSurface,
             lineHeight = 18.sp
           )
         }
@@ -552,7 +549,7 @@ fun SettingsScreen(
       confirmButton = {
         Button(
           onClick = { showPrivacyPolicyDialog = false },
-          colors = ButtonDefaults.buttonColors(containerColor = KinetiqPurpleNeon, contentColor = KinetiqBlack)
+          colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary)
         ) {
           Text("Understood", fontWeight = FontWeight.Bold)
         }
@@ -567,25 +564,27 @@ private fun SettingsSectionCard(
   icon: ImageVector,
   content: @Composable () -> Unit
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, KinetiqBorderSubtle, RoundedCornerShape(22.dp)),
+      .border(1.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(22.dp)),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
           modifier = Modifier
             .size(38.dp)
-            .background(KinetiqPurplePrimary.copy(alpha = 0.2f), CircleShape),
+            .background(colorScheme.primary.copy(alpha = 0.14f), CircleShape),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = KinetiqPurpleNeon,
+            tint = colorScheme.primary,
             modifier = Modifier.size(18.dp)
           )
         }
@@ -594,7 +593,7 @@ private fun SettingsSectionCard(
           text = title,
           style = MaterialTheme.typography.titleMedium.copy(
             fontWeight = FontWeight.Bold,
-            color = KinetiqTextWhite
+            color = colorScheme.onSurface
           )
         )
       }
@@ -611,6 +610,7 @@ private fun EditProfileTargetsDialog(
   onDismiss: () -> Unit,
   onSave: (UserProfile) -> Unit
 ) {
+  val colorScheme = MaterialTheme.colorScheme
   val initialName = if (currentProfile.displayName.equals("Wellness Seeker", ignoreCase = true)) {
     "Athlete"
   } else {
@@ -623,9 +623,9 @@ private fun EditProfileTargetsDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    containerColor = KinetiqElevatedCard,
-    titleContentColor = KinetiqTextWhite,
-    textContentColor = KinetiqTextMuted,
+    containerColor = colorScheme.surfaceContainerHigh,
+    titleContentColor = colorScheme.onSurface,
+    textContentColor = colorScheme.onSurfaceVariant,
     title = { Text("Customize Goals & Profile") },
     text = {
       Column(
@@ -633,7 +633,7 @@ private fun EditProfileTargetsDialog(
           .fillMaxWidth()
           .verticalScroll(rememberScrollState())
       ) {
-        Text("Display Name:", color = KinetiqTextWhite)
+        Text("Display Name:", color = colorScheme.onSurface)
         OutlinedTextField(
           value = name,
           onValueChange = { name = it },
@@ -643,7 +643,7 @@ private fun EditProfileTargetsDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("Daily Step Target:", color = KinetiqTextWhite)
+        Text("Daily Step Target:", color = colorScheme.onSurface)
         OutlinedTextField(
           value = steps,
           onValueChange = { steps = it.filter { c -> c.isDigit() } },
@@ -654,7 +654,7 @@ private fun EditProfileTargetsDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("Daily Water Target (ml):", color = KinetiqTextWhite)
+        Text("Daily Water Target (ml):", color = colorScheme.onSurface)
         OutlinedTextField(
           value = water,
           onValueChange = { water = it.filter { c -> c.isDigit() } },
@@ -665,7 +665,7 @@ private fun EditProfileTargetsDialog(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Text("Nightly Sleep Target (hours):", color = KinetiqTextWhite)
+        Text("Nightly Sleep Target (hours):", color = colorScheme.onSurface)
         OutlinedTextField(
           value = sleepHours,
           onValueChange = { sleepHours = it },
@@ -690,14 +690,14 @@ private fun EditProfileTargetsDialog(
             )
           )
         },
-        colors = ButtonDefaults.buttonColors(containerColor = KinetiqPurpleNeon, contentColor = KinetiqBlack)
+        colors = ButtonDefaults.buttonColors(containerColor = colorScheme.primary, contentColor = colorScheme.onPrimary)
       ) {
         Text("Save Goals", fontWeight = FontWeight.Bold)
       }
     },
     dismissButton = {
       TextButton(onClick = onDismiss) {
-        Text("Cancel", color = KinetiqTextMuted)
+        Text("Cancel", color = colorScheme.onSurfaceVariant)
       }
     }
   )

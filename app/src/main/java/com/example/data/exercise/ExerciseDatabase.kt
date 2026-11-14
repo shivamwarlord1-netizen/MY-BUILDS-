@@ -27,6 +27,19 @@ enum class MuscleGroup(val displayName: String) {
   CORE("Core")
 }
 
+enum class ExerciseTier(val displayName: String) {
+  BEGINNER("Beginner"),
+  INTERMEDIATE("Intermediate")
+}
+
+fun Exercise.resolveTier(): ExerciseTier {
+  return if (difficulty.equals("Beginner", ignoreCase = true)) {
+    ExerciseTier.BEGINNER
+  } else {
+    ExerciseTier.INTERMEDIATE
+  }
+}
+
 enum class AnatomyType {
   SHOULDERS,
   CHEST,
@@ -197,6 +210,34 @@ object ExerciseDatabase {
       commonMistakes = listOf(
         "Turning the flye into a pressing motion by bending and straightening elbows.",
         "Letting elbows travel behind torso without control."
+      ),
+      anatomyDiagramType = AnatomyType.CHEST
+    ),
+    Exercise(
+      id = "push-up",
+      name = "Bodyweight Push-Up",
+      muscleGroup = MuscleGroup.CHEST,
+      primaryMuscle = "Pectoralis Major (Sternal & Clavicular)",
+      secondaryMuscles = listOf("Anterior Deltoids", "Triceps Brachii", "Core & Serratus Anterior"),
+      equipment = "Bodyweight (Floor)",
+      difficulty = "Beginner",
+      recommendedSetsReps = "3 Sets × 12–15 Reps",
+      visualTip = "Hold a rigid straight-line plank & tuck elbows ~45°",
+      overview = "The foundational full-plank bodyweight horizontal press that builds chest, shoulder, triceps, and deep core bracing strength simultaneously.",
+      setupSteps = listOf(
+        "Place palms flat on the floor slightly wider than shoulder width, stacked directly beneath shoulders.",
+        "Extend legs straight back onto the balls of your feet with heels lifted and ankles together.",
+        "Brace abs, squeeze glutes, and align ears, shoulders, hips, knees, and ankles into one straight plank line."
+      ),
+      executionSteps = listOf(
+        "Lower your chest smoothly toward the floor over 2.5 seconds while keeping elbows tucked ~45° from your torso.",
+        "Pause briefly when chest hovers just above the floor with forearms vertical and neck neutral.",
+        "Press firmly through both palms until arms return to high-plank lockout without letting hips sag."
+      ),
+      breathingPattern = "Inhale smoothly during the controlled lowering descent; exhale forcefully as you press back up.",
+      commonMistakes = listOf(
+        "Letting the lower back sag or hips pike upward out of straight-line plank alignment.",
+        "Flaring elbows out to 90° or craning the neck forward toward the floor."
       ),
       anatomyDiagramType = AnatomyType.CHEST
     ),
@@ -446,6 +487,15 @@ object ExerciseDatabase {
 
   fun getExercisesByGroup(group: MuscleGroup?): List<Exercise> {
     return if (group == null) exercises else exercises.filter { it.muscleGroup == group }
+  }
+
+  fun getExercisesByTier(tier: ExerciseTier): List<Exercise> {
+    return exercises.filter { it.resolveTier() == tier }
+  }
+
+  fun getExercisesByTierAndGroup(tier: ExerciseTier, group: MuscleGroup?): List<Exercise> {
+    val tierList = getExercisesByTier(tier)
+    return if (group == null) tierList else tierList.filter { it.muscleGroup == group }
   }
 
   fun getExerciseById(id: String): Exercise? {

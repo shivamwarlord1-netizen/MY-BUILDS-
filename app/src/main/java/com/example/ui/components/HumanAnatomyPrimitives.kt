@@ -93,199 +93,268 @@ internal fun DrawScope.drawVectorHead(
   center: Offset,
   radius: Float,
   facingDir: Int = 0,
-  isBackView: Boolean = false
+  isBackView: Boolean = false,
+  headAngleDeg: Float = 0f
 ) {
-  // Ears
-  if (facingDir == 0) {
-    drawCircle(VectorAthletePalette.skinShadow, radius * 0.23f, Offset(center.x - radius * 0.94f, center.y + radius * 0.08f))
-    drawCircle(VectorAthletePalette.skinBase, radius * 0.16f, Offset(center.x - radius * 0.92f, center.y + radius * 0.08f))
-    drawCircle(VectorAthletePalette.skinShadow, radius * 0.23f, Offset(center.x + radius * 0.94f, center.y + radius * 0.08f))
-    drawCircle(VectorAthletePalette.skinBase, radius * 0.16f, Offset(center.x + radius * 0.92f, center.y + radius * 0.08f))
-  } else {
-    drawCircle(VectorAthletePalette.skinShadow, radius * 0.23f, Offset(center.x - facingDir * radius * 0.28f, center.y + radius * 0.10f))
-  }
+  rotate(degrees = headAngleDeg, pivot = center) {
+    if (isBackView || facingDir == 0) {
+      // Symmetrical ears behind head silhouette
+      drawCircle(VectorAthletePalette.skinShadow, radius * 0.22f, Offset(center.x - radius * 0.93f, center.y + radius * 0.08f))
+      drawCircle(VectorAthletePalette.skinBase, radius * 0.15f, Offset(center.x - radius * 0.91f, center.y + radius * 0.08f))
+      drawCircle(VectorAthletePalette.skinShadow, radius * 0.22f, Offset(center.x + radius * 0.93f, center.y + radius * 0.08f))
+      drawCircle(VectorAthletePalette.skinBase, radius * 0.15f, Offset(center.x + radius * 0.91f, center.y + radius * 0.08f))
+    }
 
-  // Smooth friendly head & jaw silhouette
-  val headPath = Path().apply {
-    if (facingDir == 0) {
-      moveTo(center.x, center.y - radius * 1.02f)
-      cubicTo(
-        center.x + radius * 1.02f, center.y - radius * 1.02f,
-        center.x + radius * 0.98f, center.y + radius * 0.30f,
-        center.x + radius * 0.56f, center.y + radius * 0.88f
+    // Smooth friendly head & jaw silhouette
+    val headPath = Path().apply {
+      if (isBackView || facingDir == 0) {
+        moveTo(center.x, center.y - radius * 1.00f)
+        cubicTo(
+          center.x + radius * 1.00f, center.y - radius * 1.00f,
+          center.x + radius * 0.96f, center.y + radius * 0.28f,
+          center.x + radius * 0.54f, center.y + radius * 0.84f
+        )
+        cubicTo(
+          center.x + radius * 0.22f, center.y + radius * 1.12f,
+          center.x - radius * 0.22f, center.y + radius * 1.12f,
+          center.x - radius * 0.54f, center.y + radius * 0.84f
+        )
+        cubicTo(
+          center.x - radius * 0.96f, center.y + radius * 0.28f,
+          center.x - radius * 1.00f, center.y - radius * 1.00f,
+          center.x, center.y - radius * 1.00f
+        )
+      } else {
+        val d = facingDir.toFloat()
+        moveTo(center.x - d * radius * 0.10f, center.y - radius * 1.00f)
+        cubicTo(
+          center.x + d * radius * 0.90f, center.y - radius * 0.92f,
+          center.x + d * radius * 1.02f, center.y - radius * 0.08f,
+          center.x + d * radius * 0.90f, center.y + radius * 0.38f
+        )
+        cubicTo(
+          center.x + d * radius * 0.80f, center.y + radius * 0.90f,
+          center.x + d * radius * 0.34f, center.y + radius * 1.10f,
+          center.x - d * radius * 0.22f, center.y + radius * 0.86f
+        )
+        cubicTo(
+          center.x - d * radius * 0.68f, center.y + radius * 0.62f,
+          center.x - d * radius * 1.02f, center.y - radius * 0.42f,
+          center.x - d * radius * 0.10f, center.y - radius * 1.00f
+        )
+      }
+      close()
+    }
+    drawPath(headPath, VectorAthletePalette.skinBase)
+
+    if (isBackView) {
+      // Tapered posterior hair coverage leaving clean nape skin above neck
+      val backHair = Path().apply {
+        moveTo(center.x - radius * 0.95f, center.y + radius * 0.14f)
+        cubicTo(
+          center.x - radius * 1.08f, center.y - radius * 1.22f,
+          center.x + radius * 1.08f, center.y - radius * 1.22f,
+          center.x + radius * 0.95f, center.y + radius * 0.14f
+        )
+        cubicTo(
+          center.x + radius * 0.82f, center.y + radius * 0.42f,
+          center.x + radius * 0.62f, center.y + radius * 0.56f,
+          center.x + radius * 0.44f, center.y + radius * 0.60f
+        )
+        quadraticTo(
+          center.x, center.y + radius * 0.54f,
+          center.x - radius * 0.44f, center.y + radius * 0.60f
+        )
+        cubicTo(
+          center.x - radius * 0.62f, center.y + radius * 0.56f,
+          center.x - radius * 0.82f, center.y + radius * 0.42f,
+          center.x - radius * 0.95f, center.y + radius * 0.14f
+        )
+        close()
+      }
+      drawPath(backHair, VectorAthletePalette.hairDark)
+
+      val crownSheen = Path().apply {
+        moveTo(center.x - radius * 0.46f, center.y - radius * 0.78f)
+        quadraticTo(center.x, center.y - radius * 0.94f, center.x + radius * 0.46f, center.y - radius * 0.78f)
+      }
+      drawPath(
+        path = crownSheen,
+        color = VectorAthletePalette.hairHighlight,
+        style = Stroke(width = (radius * 0.11f).coerceAtLeast(1.1f), cap = StrokeCap.Round)
       )
-      cubicTo(
-        center.x + radius * 0.22f, center.y + radius * 1.18f,
-        center.x - radius * 0.22f, center.y + radius * 1.18f,
-        center.x - radius * 0.56f, center.y + radius * 0.88f
+    } else if (facingDir == 0) {
+      // Natural sculpted side-swept dark hair hugging temples & ears
+      val hairPath = Path().apply {
+        moveTo(center.x - radius * 0.92f, center.y - radius * 0.04f)
+        cubicTo(
+          center.x - radius * 1.08f, center.y - radius * 0.82f,
+          center.x - radius * 0.48f, center.y - radius * 1.26f,
+          center.x + radius * 0.10f, center.y - radius * 1.24f
+        )
+        cubicTo(
+          center.x + radius * 0.72f, center.y - radius * 1.20f,
+          center.x + radius * 1.06f, center.y - radius * 0.74f,
+          center.x + radius * 0.92f, center.y - radius * 0.04f
+        )
+        // Right sideburn tapering cleanly to forehead hairline
+        cubicTo(
+          center.x + radius * 0.86f, center.y - radius * 0.24f,
+          center.x + radius * 0.80f, center.y - radius * 0.40f,
+          center.x + radius * 0.62f, center.y - radius * 0.48f
+        )
+        // Smooth asymmetric swept fringe across forehead
+        cubicTo(
+          center.x + radius * 0.30f, center.y - radius * 0.62f,
+          center.x - radius * 0.22f, center.y - radius * 0.60f,
+          center.x - radius * 0.62f, center.y - radius * 0.44f
+        )
+        // Left temple sideburn
+        cubicTo(
+          center.x - radius * 0.80f, center.y - radius * 0.36f,
+          center.x - radius * 0.86f, center.y - radius * 0.22f,
+          center.x - radius * 0.92f, center.y - radius * 0.04f
+        )
+        close()
+      }
+      drawPath(hairPath, VectorAthletePalette.hairDark)
+
+      val crownSheen = Path().apply {
+        moveTo(center.x - radius * 0.42f, center.y - radius * 0.92f)
+        quadraticTo(center.x + radius * 0.06f, center.y - radius * 1.04f, center.x + radius * 0.46f, center.y - radius * 0.88f)
+      }
+      drawPath(
+        path = crownSheen,
+        color = VectorAthletePalette.hairHighlight,
+        style = Stroke(width = (radius * 0.11f).coerceAtLeast(1.1f), cap = StrokeCap.Round)
       )
-      cubicTo(
-        center.x - radius * 0.98f, center.y + radius * 0.30f,
-        center.x - radius * 1.02f, center.y - radius * 1.02f,
-        center.x, center.y - radius * 1.02f
+
+      // Friendly eyebrows, expressive dark eyes, gentle nose, calm smile
+      val eyeY = center.y + radius * 0.02f
+      val eyeOffsetX = radius * 0.34f
+      val browY = center.y - radius * 0.18f
+
+      drawLine(
+        color = VectorAthletePalette.hairDark,
+        start = Offset(center.x - eyeOffsetX - radius * 0.15f, browY),
+        end = Offset(center.x - eyeOffsetX + radius * 0.15f, browY - radius * 0.03f),
+        strokeWidth = (radius * 0.09f).coerceAtLeast(1.1f),
+        cap = StrokeCap.Round
+      )
+      drawLine(
+        color = VectorAthletePalette.hairDark,
+        start = Offset(center.x + eyeOffsetX - radius * 0.15f, browY - radius * 0.03f),
+        end = Offset(center.x + eyeOffsetX + radius * 0.15f, browY),
+        strokeWidth = (radius * 0.09f).coerceAtLeast(1.1f),
+        cap = StrokeCap.Round
+      )
+
+      drawCircle(VectorAthletePalette.eyeDark, radius * 0.095f, Offset(center.x - eyeOffsetX, eyeY))
+      drawCircle(VectorAthletePalette.eyeDark, radius * 0.095f, Offset(center.x + eyeOffsetX, eyeY))
+
+      drawLine(
+        color = VectorAthletePalette.skinShadow,
+        start = Offset(center.x, eyeY + radius * 0.06f),
+        end = Offset(center.x + radius * 0.05f, eyeY + radius * 0.28f),
+        strokeWidth = (radius * 0.08f).coerceAtLeast(1f),
+        cap = StrokeCap.Round
+      )
+
+      val smilePath = Path().apply {
+        moveTo(center.x - radius * 0.22f, center.y + radius * 0.50f)
+        quadraticTo(
+          center.x, center.y + radius * 0.65f,
+          center.x + radius * 0.22f, center.y + radius * 0.50f
+        )
+      }
+      drawPath(
+        path = smilePath,
+        color = VectorAthletePalette.mouthTone,
+        style = Stroke(width = (radius * 0.09f).coerceAtLeast(1.1f), cap = StrokeCap.Round)
       )
     } else {
+      // Side-profile hair wrapping cleanly from forehead quiff down to tapered nape
       val d = facingDir.toFloat()
-      moveTo(center.x - d * radius * 0.1f, center.y - radius * 1.02f)
-      cubicTo(
-        center.x + d * radius * 0.92f, center.y - radius * 0.95f,
-        center.x + d * radius * 1.06f, center.y - radius * 0.08f,
-        center.x + d * radius * 0.92f, center.y + radius * 0.38f
+      val sideHair = Path().apply {
+        moveTo(center.x + d * radius * 0.78f, center.y - radius * 0.44f)
+        cubicTo(
+          center.x + d * radius * 0.88f, center.y - radius * 1.06f,
+          center.x + d * radius * 0.14f, center.y - radius * 1.25f,
+          center.x - d * radius * 0.56f, center.y - radius * 1.08f
+        )
+        cubicTo(
+          center.x - d * radius * 1.06f, center.y - radius * 0.86f,
+          center.x - d * radius * 1.00f, center.y + radius * 0.14f,
+          center.x - d * radius * 0.66f, center.y + radius * 0.58f
+        )
+        // Smooth curve along nape up behind the ear
+        cubicTo(
+          center.x - d * radius * 0.46f, center.y + radius * 0.54f,
+          center.x - d * radius * 0.36f, center.y + radius * 0.24f,
+          center.x - d * radius * 0.32f, center.y - radius * 0.04f
+        )
+        // Tidy sideburn in front of the ear
+        cubicTo(
+          center.x - d * radius * 0.18f, center.y - radius * 0.06f,
+          center.x - d * radius * 0.12f, center.y + radius * 0.08f,
+          center.x - d * radius * 0.10f, center.y - radius * 0.20f
+        )
+        // Curved temple hairline back to forehead
+        cubicTo(
+          center.x - d * radius * 0.02f, center.y - radius * 0.48f,
+          center.x + d * radius * 0.38f, center.y - radius * 0.50f,
+          center.x + d * radius * 0.78f, center.y - radius * 0.44f
+        )
+        close()
+      }
+      drawPath(sideHair, VectorAthletePalette.hairDark)
+
+      val crownSheen = Path().apply {
+        moveTo(center.x - d * radius * 0.42f, center.y - radius * 0.84f)
+        quadraticTo(
+          center.x + d * radius * 0.08f, center.y - radius * 0.94f,
+          center.x + d * radius * 0.46f, center.y - radius * 0.76f
+        )
+      }
+      drawPath(
+        path = crownSheen,
+        color = VectorAthletePalette.hairHighlight,
+        style = Stroke(width = (radius * 0.11f).coerceAtLeast(1.1f), cap = StrokeCap.Round)
       )
-      cubicTo(
-        center.x + d * radius * 0.82f, center.y + radius * 0.94f,
-        center.x + d * radius * 0.32f, center.y + radius * 1.14f,
-        center.x - d * radius * 0.25f, center.y + radius * 0.88f
+
+      // Ear placed cleanly at the sideburn/nape recess
+      val earCenter = Offset(center.x - d * radius * 0.24f, center.y + radius * 0.08f)
+      drawCircle(VectorAthletePalette.skinBase, radius * 0.21f, earCenter)
+      drawCircle(VectorAthletePalette.skinShadow, radius * 0.11f, earCenter)
+
+      // Side profile brow, eye & calm smile
+      drawLine(
+        color = VectorAthletePalette.hairDark,
+        start = Offset(center.x + d * radius * 0.28f, center.y - radius * 0.16f),
+        end = Offset(center.x + d * radius * 0.64f, center.y - radius * 0.14f),
+        strokeWidth = (radius * 0.09f).coerceAtLeast(1f),
+        cap = StrokeCap.Round
       )
-      cubicTo(
-        center.x - d * radius * 0.95f, center.y + radius * 0.55f,
-        center.x - d * radius * 1.02f, center.y - radius * 0.72f,
-        center.x - d * radius * 0.1f, center.y - radius * 1.02f
+      drawCircle(
+        color = VectorAthletePalette.eyeDark,
+        radius = radius * 0.09f,
+        center = Offset(center.x + d * radius * 0.48f, center.y + radius * 0.03f)
+      )
+      drawLine(
+        color = VectorAthletePalette.mouthTone,
+        start = Offset(center.x + d * radius * 0.48f, center.y + radius * 0.54f),
+        end = Offset(center.x + d * radius * 0.76f, center.y + radius * 0.50f),
+        strokeWidth = (radius * 0.09f).coerceAtLeast(1f),
+        cap = StrokeCap.Round
       )
     }
-    close()
-  }
-  drawPath(headPath, VectorAthletePalette.skinBase)
-
-  if (isBackView) {
-    // Full posterior hair coverage
-    val backHair = Path().apply {
-      moveTo(center.x - radius * 0.96f, center.y + radius * 0.22f)
-      cubicTo(
-        center.x - radius * 1.08f, center.y - radius * 1.20f,
-        center.x + radius * 1.08f, center.y - radius * 1.20f,
-        center.x + radius * 0.96f, center.y + radius * 0.22f
-      )
-      cubicTo(
-        center.x + radius * 0.62f, center.y + radius * 0.84f,
-        center.x - radius * 0.62f, center.y + radius * 0.84f,
-        center.x - radius * 0.96f, center.y + radius * 0.22f
-      )
-      close()
-    }
-    drawPath(backHair, VectorAthletePalette.hairDark)
-  } else if (facingDir == 0) {
-    // Tousled side-swept dark hair matching reference illustration
-    val hairPath = Path().apply {
-      moveTo(center.x - radius * 0.94f, center.y - radius * 0.12f)
-      cubicTo(
-        center.x - radius * 1.10f, center.y - radius * 0.95f,
-        center.x - radius * 0.45f, center.y - radius * 1.28f,
-        center.x + radius * 0.12f, center.y - radius * 1.22f
-      )
-      cubicTo(
-        center.x + radius * 0.78f, center.y - radius * 1.18f,
-        center.x + radius * 1.08f, center.y - radius * 0.72f,
-        center.x + radius * 0.94f, center.y - radius * 0.12f
-      )
-      // Sideburn & fringe contour
-      cubicTo(
-        center.x + radius * 0.78f, center.y - radius * 0.56f,
-        center.x + radius * 0.35f, center.y - radius * 0.55f,
-        center.x + radius * 0.05f, center.y - radius * 0.68f
-      )
-      cubicTo(
-        center.x - radius * 0.35f, center.y - radius * 0.55f,
-        center.x - radius * 0.78f, center.y - radius * 0.56f,
-        center.x - radius * 0.94f, center.y - radius * 0.12f
-      )
-      close()
-    }
-    drawPath(hairPath, VectorAthletePalette.hairDark)
-
-    // Friendly eyebrows, expressive dark eyes, gentle nose, calm smile
-    val eyeY = center.y + radius * 0.02f
-    val eyeOffsetX = radius * 0.34f
-    val browY = center.y - radius * 0.18f
-
-    // Brows
-    drawLine(
-      color = VectorAthletePalette.hairDark,
-      start = Offset(center.x - eyeOffsetX - radius * 0.15f, browY),
-      end = Offset(center.x - eyeOffsetX + radius * 0.15f, browY - radius * 0.03f),
-      strokeWidth = (radius * 0.09f).coerceAtLeast(1.1f),
-      cap = StrokeCap.Round
-    )
-    drawLine(
-      color = VectorAthletePalette.hairDark,
-      start = Offset(center.x + eyeOffsetX - radius * 0.15f, browY - radius * 0.03f),
-      end = Offset(center.x + eyeOffsetX + radius * 0.15f, browY),
-      strokeWidth = (radius * 0.09f).coerceAtLeast(1.1f),
-      cap = StrokeCap.Round
-    )
-
-    // Eyes
-    drawCircle(VectorAthletePalette.eyeDark, radius * 0.095f, Offset(center.x - eyeOffsetX, eyeY))
-    drawCircle(VectorAthletePalette.eyeDark, radius * 0.095f, Offset(center.x + eyeOffsetX, eyeY))
-
-    // Nose hint
-    drawLine(
-      color = VectorAthletePalette.skinShadow,
-      start = Offset(center.x, eyeY + radius * 0.06f),
-      end = Offset(center.x + radius * 0.05f, eyeY + radius * 0.28f),
-      strokeWidth = (radius * 0.08f).coerceAtLeast(1f),
-      cap = StrokeCap.Round
-    )
-
-    // Calm smile
-    val smilePath = Path().apply {
-      moveTo(center.x - radius * 0.22f, center.y + radius * 0.50f)
-      quadraticTo(
-        center.x, center.y + radius * 0.66f,
-        center.x + radius * 0.22f, center.y + radius * 0.50f
-      )
-    }
-    drawPath(
-      path = smilePath,
-      color = VectorAthletePalette.mouthTone,
-      style = Stroke(width = (radius * 0.09f).coerceAtLeast(1.1f), cap = StrokeCap.Round)
-    )
-  } else {
-    // Side-profile tousled hair + eye + brow + smile
-    val d = facingDir.toFloat()
-    val sideHair = Path().apply {
-      moveTo(center.x + d * radius * 0.72f, center.y - radius * 0.48f)
-      cubicTo(
-        center.x + d * radius * 0.62f, center.y - radius * 1.24f,
-        center.x - d * radius * 1.05f, center.y - radius * 1.12f,
-        center.x - d * radius * 0.88f, center.y + radius * 0.20f
-      )
-      lineTo(center.x - d * radius * 0.36f, center.y + radius * 0.14f)
-      cubicTo(
-        center.x - d * radius * 0.22f, center.y - radius * 0.42f,
-        center.x + d * radius * 0.22f, center.y - radius * 0.48f,
-        center.x + d * radius * 0.72f, center.y - radius * 0.48f
-      )
-      close()
-    }
-    drawPath(sideHair, VectorAthletePalette.hairDark)
-
-    // Side profile brow & eye & mouth
-    drawLine(
-      color = VectorAthletePalette.hairDark,
-      start = Offset(center.x + d * radius * 0.28f, center.y - radius * 0.16f),
-      end = Offset(center.x + d * radius * 0.64f, center.y - radius * 0.14f),
-      strokeWidth = (radius * 0.09f).coerceAtLeast(1f),
-      cap = StrokeCap.Round
-    )
-    drawCircle(
-      color = VectorAthletePalette.eyeDark,
-      radius = radius * 0.09f,
-      center = Offset(center.x + d * radius * 0.48f, center.y + radius * 0.03f)
-    )
-    drawLine(
-      color = VectorAthletePalette.mouthTone,
-      start = Offset(center.x + d * radius * 0.48f, center.y + radius * 0.54f),
-      end = Offset(center.x + d * radius * 0.76f, center.y + radius * 0.50f),
-      strokeWidth = (radius * 0.09f).coerceAtLeast(1f),
-      cap = StrokeCap.Round
-    )
   }
 }
 
 /**
  * Draws the front upper body wearing the light sky-blue sleeveless athletic tank top,
- * with natural tan neck and collar skin above the scoop neckline.
+ * with athletic traps, rounded deltoid caps, subtle pec contour, and V-taper waist.
+ * Supports shifting shoulders horizontally relative to [hipCenterX] for rotational lifts.
  */
 internal fun DrawScope.drawVectorFrontTankTorso(
   neckTop: Offset,
@@ -294,118 +363,142 @@ internal fun DrawScope.drawVectorFrontTankTorso(
   waistY: Float,
   waistHalfWidth: Float,
   hipY: Float,
-  hipHalfWidth: Float
+  hipHalfWidth: Float,
+  hipCenterX: Float = neckTop.x
 ) {
-  val cx = neckTop.x
+  val neckX = neckTop.x
   val shoulderSpan = (rightShoulder.x - leftShoulder.x).coerceAtLeast(10f)
-  val neckHalfW = shoulderSpan * 0.17f
-  val neckBaseY = (leftShoulder.y + rightShoulder.y) * 0.5f - shoulderSpan * 0.06f
-  val strapOuterX = shoulderSpan * 0.36f
-  val strapInnerX = shoulderSpan * 0.22f
-  val chestMidY = (leftShoulder.y + rightShoulder.y) * 0.5f + shoulderSpan * 0.22f
+  val neckHalfW = shoulderSpan * 0.165f
+  val shoulderMidY = (leftShoulder.y + rightShoulder.y) * 0.5f
+  val neckBaseY = shoulderMidY - shoulderSpan * 0.08f
+  val strapOuterX = shoulderSpan * 0.37f
+  val strapInnerX = shoulderSpan * 0.21f
+  val chestMidY = shoulderMidY + shoulderSpan * 0.23f
+  val waistX = lerpFloat(neckX, hipCenterX, 0.52f)
 
-  // 1. Warm tan neck + upper chest collar triangle
-  val neckPath = Path().apply {
-    moveTo(cx - neckHalfW, neckTop.y)
-    lineTo(cx + neckHalfW, neckTop.y)
+  // 1. Athletic tan neck, fuller traps & rounded deltoid caps beneath tank straps
+  val skinPath = Path().apply {
+    moveTo(neckX - neckHalfW, neckTop.y)
+    lineTo(neckX + neckHalfW, neckTop.y)
     cubicTo(
-      cx + neckHalfW * 1.15f, neckBaseY,
-      cx + strapOuterX, leftShoulder.y - shoulderSpan * 0.02f,
-      cx + strapOuterX, leftShoulder.y + shoulderSpan * 0.04f
+      neckX + neckHalfW * 1.18f, neckBaseY,
+      rightShoulder.x - shoulderSpan * 0.12f, rightShoulder.y - shoulderSpan * 0.08f,
+      rightShoulder.x, rightShoulder.y
     )
-    lineTo(cx + strapInnerX, chestMidY)
-    lineTo(cx - strapInnerX, chestMidY)
-    lineTo(cx - strapOuterX, leftShoulder.y + shoulderSpan * 0.04f)
+    lineTo(neckX + strapInnerX, chestMidY)
+    lineTo(neckX - strapInnerX, chestMidY)
+    lineTo(leftShoulder.x, leftShoulder.y)
     cubicTo(
-      cx - strapOuterX, leftShoulder.y - shoulderSpan * 0.02f,
-      cx - neckHalfW * 1.15f, neckBaseY,
-      cx - neckHalfW, neckTop.y
+      leftShoulder.x + shoulderSpan * 0.12f, leftShoulder.y - shoulderSpan * 0.08f,
+      neckX - neckHalfW * 1.18f, neckBaseY,
+      neckX - neckHalfW, neckTop.y
     )
     close()
   }
-  drawPath(neckPath, VectorAthletePalette.skinBase)
-
-  // Subtle under-chin shadow
-  drawOval(
-    color = VectorAthletePalette.skinShadow.copy(alpha = 0.65f),
-    topLeft = Offset(cx - neckHalfW * 0.85f, neckTop.y - neckHalfW * 0.2f),
-    size = Size(neckHalfW * 1.7f, neckHalfW * 0.8f)
+  drawPath(skinPath, VectorAthletePalette.skinBase)
+  val deltRadius = shoulderSpan * 0.128f
+  drawCircle(VectorAthletePalette.skinBase, deltRadius, leftShoulder)
+  drawCircle(VectorAthletePalette.skinBase, deltRadius, rightShoulder)
+  // Subtle lateral deltoid cap contour
+  drawCircle(
+    color = VectorAthletePalette.skinShadow.copy(alpha = 0.38f),
+    radius = deltRadius * 0.86f,
+    center = leftShoulder,
+    style = Stroke(width = (shoulderSpan * 0.022f).coerceAtLeast(0.8f))
+  )
+  drawCircle(
+    color = VectorAthletePalette.skinShadow.copy(alpha = 0.38f),
+    radius = deltRadius * 0.86f,
+    center = rightShoulder,
+    style = Stroke(width = (shoulderSpan * 0.022f).coerceAtLeast(0.8f))
   )
 
-  // 2. Light Sky-Blue Sleeveless Athletic Tank Top
-  val armHoleY = (leftShoulder.y + rightShoulder.y) * 0.5f + shoulderSpan * 0.26f
+  // Subtle under-chin neck shadow (head draws on top cleanly)
+  drawOval(
+    color = VectorAthletePalette.skinShadow.copy(alpha = 0.50f),
+    topLeft = Offset(neckX - neckHalfW * 0.90f, neckTop.y + neckHalfW * 0.10f),
+    size = Size(neckHalfW * 1.80f, neckHalfW * 0.85f)
+  )
+
+  // 2. Light Sky-Blue Sleeveless Athletic Tank Top with muscular chest/lat V-taper
+  val armHoleY = shoulderMidY + shoulderSpan * 0.27f
   val tankBottomY = hipY + (hipY - waistY) * 0.16f
-  val torsoWidth = (waistHalfWidth * 1.14f).coerceAtLeast(hipHalfWidth * 0.96f)
+  val chestLatHalfW = (waistHalfWidth * 1.24f).coerceAtLeast(hipHalfWidth * 1.04f)
+  val midWaistHalfW = waistHalfWidth * 1.04f
 
   val tankPath = Path().apply {
-    // Left strap top
-    moveTo(cx - strapOuterX, leftShoulder.y)
-    lineTo(cx - strapInnerX, leftShoulder.y)
-    // Smooth U-shaped scoop neckline
+    moveTo(neckX - strapOuterX, leftShoulder.y)
+    lineTo(neckX - strapInnerX, leftShoulder.y)
     cubicTo(
-      cx - strapInnerX * 0.6f, chestMidY,
-      cx + strapInnerX * 0.6f, chestMidY,
-      cx + strapInnerX, rightShoulder.y
+      neckX - strapInnerX * 0.6f, chestMidY,
+      neckX + strapInnerX * 0.6f, chestMidY,
+      neckX + strapInnerX, rightShoulder.y
     )
-    // Right strap top
-    lineTo(cx + strapOuterX, rightShoulder.y)
-    // Right armhole curve inward to underarm
+    lineTo(neckX + strapOuterX, rightShoulder.y)
     cubicTo(
-      cx + strapOuterX + shoulderSpan * 0.02f, armHoleY * 0.5f + rightShoulder.y * 0.5f,
-      cx + torsoWidth * 1.04f, armHoleY - shoulderSpan * 0.05f,
-      cx + torsoWidth * 1.02f, armHoleY
+      neckX + strapOuterX + shoulderSpan * 0.03f, armHoleY * 0.45f + rightShoulder.y * 0.55f,
+      waistX + chestLatHalfW * 1.06f, armHoleY - shoulderSpan * 0.06f,
+      waistX + chestLatHalfW, armHoleY
     )
-    // Relaxed athletic tank side down to hem
     cubicTo(
-      cx + torsoWidth * 0.98f, lerpFloat(armHoleY, tankBottomY, 0.55f),
-      cx + hipHalfWidth * 1.04f, tankBottomY - shoulderSpan * 0.05f,
-      cx + hipHalfWidth * 1.04f, tankBottomY
+      waistX + midWaistHalfW, lerpFloat(armHoleY, tankBottomY, 0.55f),
+      hipCenterX + hipHalfWidth * 1.03f, tankBottomY - shoulderSpan * 0.05f,
+      hipCenterX + hipHalfWidth * 1.03f, tankBottomY
     )
-    // Gently curved hem
     quadraticTo(
-      cx, tankBottomY + shoulderSpan * 0.05f,
-      cx - hipHalfWidth * 1.04f, tankBottomY
+      hipCenterX, tankBottomY + shoulderSpan * 0.05f,
+      hipCenterX - hipHalfWidth * 1.03f, tankBottomY
     )
-    // Left side up to left underarm
     cubicTo(
-      cx - hipHalfWidth * 1.04f, tankBottomY - shoulderSpan * 0.05f,
-      cx - torsoWidth * 0.98f, lerpFloat(armHoleY, tankBottomY, 0.55f),
-      cx - torsoWidth * 1.02f, armHoleY
+      hipCenterX - hipHalfWidth * 1.03f, tankBottomY - shoulderSpan * 0.05f,
+      waistX - midWaistHalfW, lerpFloat(armHoleY, tankBottomY, 0.55f),
+      waistX - chestLatHalfW, armHoleY
     )
-    // Left armhole back to left strap
     cubicTo(
-      cx - torsoWidth * 1.04f, armHoleY - shoulderSpan * 0.05f,
-      cx - strapOuterX - shoulderSpan * 0.02f, armHoleY * 0.5f + leftShoulder.y * 0.5f,
-      cx - strapOuterX, leftShoulder.y
+      waistX - chestLatHalfW * 1.06f, armHoleY - shoulderSpan * 0.06f,
+      neckX - strapOuterX - shoulderSpan * 0.03f, armHoleY * 0.45f + leftShoulder.y * 0.55f,
+      neckX - strapOuterX, leftShoulder.y
     )
     close()
   }
   drawPath(tankPath, VectorAthletePalette.tankBlue)
 
-  // Subtle scoop collar trim & lower hem fold
+  // Scoop collar trim & subtle pectoral separation contour
   drawPath(
     path = Path().apply {
-      moveTo(cx - strapInnerX, leftShoulder.y + shoulderSpan * 0.02f)
+      moveTo(neckX - strapInnerX, leftShoulder.y + shoulderSpan * 0.02f)
       cubicTo(
-        cx - strapInnerX * 0.6f, chestMidY,
-        cx + strapInnerX * 0.6f, chestMidY,
-        cx + strapInnerX, rightShoulder.y + shoulderSpan * 0.02f
+        neckX - strapInnerX * 0.6f, chestMidY,
+        neckX + strapInnerX * 0.6f, chestMidY,
+        neckX + strapInnerX, rightShoulder.y + shoulderSpan * 0.02f
       )
     },
     color = VectorAthletePalette.tankFold,
     style = Stroke(width = (shoulderSpan * 0.045f).coerceAtLeast(1.2f), cap = StrokeCap.Round)
   )
+  val pecY = armHoleY + shoulderSpan * 0.04f
+  drawPath(
+    path = Path().apply {
+      moveTo(waistX - chestLatHalfW * 0.72f, pecY - shoulderSpan * 0.02f)
+      quadraticTo(waistX - chestLatHalfW * 0.34f, pecY + shoulderSpan * 0.05f, waistX - shoulderSpan * 0.02f, pecY)
+      moveTo(waistX + shoulderSpan * 0.02f, pecY)
+      quadraticTo(waistX + chestLatHalfW * 0.34f, pecY + shoulderSpan * 0.05f, waistX + chestLatHalfW * 0.72f, pecY - shoulderSpan * 0.02f)
+    },
+    color = VectorAthletePalette.tankFold.copy(alpha = 0.65f),
+    style = Stroke(width = (shoulderSpan * 0.030f).coerceAtLeast(1f), cap = StrokeCap.Round)
+  )
   drawLine(
     color = VectorAthletePalette.tankFold,
-    start = Offset(cx - hipHalfWidth * 0.95f, tankBottomY - shoulderSpan * 0.03f),
-    end = Offset(cx + hipHalfWidth * 0.95f, tankBottomY - shoulderSpan * 0.03f),
+    start = Offset(hipCenterX - hipHalfWidth * 0.95f, tankBottomY - shoulderSpan * 0.03f),
+    end = Offset(hipCenterX + hipHalfWidth * 0.95f, tankBottomY - shoulderSpan * 0.03f),
     strokeWidth = (shoulderSpan * 0.035f).coerceAtLeast(1f),
     cap = StrokeCap.Round
   )
 }
 
 /**
- * Draws the posterior (back) upper body wearing the sky-blue athletic tank top (used for Lat Pulldown).
+ * Draws the posterior (back) upper body wearing the sky-blue athletic tank top (used for Lat Pulldown),
+ * featuring athletic traps, broader lat sweep, and subtle upper-back contour.
  */
 internal fun DrawScope.drawVectorBackTankTorso(
   neckTop: Offset,
@@ -414,77 +507,95 @@ internal fun DrawScope.drawVectorBackTankTorso(
   waistY: Float,
   waistHalfWidth: Float,
   hipY: Float,
-  hipHalfWidth: Float
+  hipHalfWidth: Float,
+  hipCenterX: Float = neckTop.x
 ) {
-  val cx = neckTop.x
+  val neckX = neckTop.x
   val shoulderSpan = (rightShoulder.x - leftShoulder.x).coerceAtLeast(10f)
-  val neckHalfW = shoulderSpan * 0.17f
-  val neckBaseY = (leftShoulder.y + rightShoulder.y) * 0.5f - shoulderSpan * 0.05f
-  val strapOuterX = shoulderSpan * 0.35f
+  val neckHalfW = shoulderSpan * 0.16f
+  val shoulderMidY = (leftShoulder.y + rightShoulder.y) * 0.5f
+  val neckBaseY = shoulderMidY - shoulderSpan * 0.08f
+  val strapOuterX = shoulderSpan * 0.36f
   val strapInnerX = shoulderSpan * 0.18f
+  val waistX = lerpFloat(neckX, hipCenterX, 0.52f)
 
   // Upper back / shoulder skin visible around racerback tank
   val skinPath = Path().apply {
-    moveTo(cx - neckHalfW, neckTop.y)
-    lineTo(cx + neckHalfW, neckTop.y)
+    moveTo(neckX - neckHalfW, neckTop.y)
+    lineTo(neckX + neckHalfW, neckTop.y)
     cubicTo(
-      cx + neckHalfW * 1.2f, neckBaseY,
-      rightShoulder.x - shoulderSpan * 0.08f, rightShoulder.y - shoulderSpan * 0.03f,
+      neckX + neckHalfW * 1.20f, neckBaseY,
+      rightShoulder.x - shoulderSpan * 0.10f, rightShoulder.y - shoulderSpan * 0.08f,
       rightShoulder.x, rightShoulder.y
     )
-    lineTo(cx + waistHalfWidth * 1.05f, waistY)
-    lineTo(cx - waistHalfWidth * 1.05f, waistY)
+    lineTo(waistX + waistHalfWidth * 1.12f, waistY)
+    lineTo(waistX - waistHalfWidth * 1.12f, waistY)
     lineTo(leftShoulder.x, leftShoulder.y)
     cubicTo(
-      leftShoulder.x + shoulderSpan * 0.08f, leftShoulder.y - shoulderSpan * 0.03f,
-      cx - neckHalfW * 1.2f, neckBaseY,
-      cx - neckHalfW, neckTop.y
+      leftShoulder.x + shoulderSpan * 0.10f, leftShoulder.y - shoulderSpan * 0.08f,
+      neckX - neckHalfW * 1.20f, neckBaseY,
+      neckX - neckHalfW, neckTop.y
     )
     close()
   }
   drawPath(skinPath, VectorAthletePalette.skinBase)
+  drawCircle(VectorAthletePalette.skinBase, shoulderSpan * 0.125f, leftShoulder)
+  drawCircle(VectorAthletePalette.skinBase, shoulderSpan * 0.125f, rightShoulder)
 
-  // Sky-blue tank top back coverage
-  val armHoleY = (leftShoulder.y + rightShoulder.y) * 0.5f + shoulderSpan * 0.25f
+  // Sky-blue tank top back coverage with muscular V-taper lats
+  val armHoleY = shoulderMidY + shoulderSpan * 0.25f
   val tankBottomY = hipY + (hipY - waistY) * 0.15f
+  val latHalfW = (waistHalfWidth * 1.26f).coerceAtLeast(hipHalfWidth * 1.04f)
   val tankPath = Path().apply {
-    moveTo(cx - strapOuterX, leftShoulder.y)
-    lineTo(cx - strapInnerX, leftShoulder.y)
-    quadraticTo(cx, leftShoulder.y + shoulderSpan * 0.10f, cx + strapInnerX, rightShoulder.y)
-    lineTo(cx + strapOuterX, rightShoulder.y)
+    moveTo(neckX - strapOuterX, leftShoulder.y)
+    lineTo(neckX - strapInnerX, leftShoulder.y)
+    quadraticTo(neckX, shoulderMidY + shoulderSpan * 0.10f, neckX + strapInnerX, rightShoulder.y)
+    lineTo(neckX + strapOuterX, rightShoulder.y)
     cubicTo(
-      cx + strapOuterX, armHoleY * 0.6f + rightShoulder.y * 0.4f,
-      cx + waistHalfWidth * 1.12f, armHoleY,
-      cx + waistHalfWidth * 1.08f, armHoleY + shoulderSpan * 0.05f
+      neckX + strapOuterX + shoulderSpan * 0.02f, armHoleY * 0.55f + rightShoulder.y * 0.45f,
+      waistX + latHalfW * 1.05f, armHoleY - shoulderSpan * 0.03f,
+      waistX + latHalfW, armHoleY + shoulderSpan * 0.05f
     )
-    lineTo(cx + hipHalfWidth * 1.04f, tankBottomY)
-    lineTo(cx - hipHalfWidth * 1.04f, tankBottomY)
-    lineTo(cx - waistHalfWidth * 1.08f, armHoleY + shoulderSpan * 0.05f)
+    lineTo(hipCenterX + hipHalfWidth * 1.03f, tankBottomY)
+    lineTo(hipCenterX - hipHalfWidth * 1.03f, tankBottomY)
+    lineTo(waistX - latHalfW, armHoleY + shoulderSpan * 0.05f)
     cubicTo(
-      cx - waistHalfWidth * 1.12f, armHoleY,
-      cx - strapOuterX, armHoleY * 0.6f + leftShoulder.y * 0.4f,
-      cx - strapOuterX, leftShoulder.y
+      waistX - latHalfW * 1.05f, armHoleY - shoulderSpan * 0.03f,
+      neckX - strapOuterX - shoulderSpan * 0.02f, armHoleY * 0.55f + leftShoulder.y * 0.45f,
+      neckX - strapOuterX, leftShoulder.y
     )
     close()
   }
   drawPath(tankPath, VectorAthletePalette.tankBlue)
   drawLine(
     color = VectorAthletePalette.tankFold,
-    start = Offset(cx, leftShoulder.y + shoulderSpan * 0.18f),
-    end = Offset(cx, tankBottomY - shoulderSpan * 0.08f),
+    start = Offset(waistX, shoulderMidY + shoulderSpan * 0.18f),
+    end = Offset(hipCenterX, tankBottomY - shoulderSpan * 0.08f),
     strokeWidth = (shoulderSpan * 0.035f).coerceAtLeast(1f),
     cap = StrokeCap.Round
+  )
+  // Subtle shoulder blade V-contour
+  drawPath(
+    path = Path().apply {
+      moveTo(waistX - latHalfW * 0.58f, armHoleY + shoulderSpan * 0.02f)
+      lineTo(waistX, armHoleY + shoulderSpan * 0.18f)
+      lineTo(waistX + latHalfW * 0.58f, armHoleY + shoulderSpan * 0.02f)
+    },
+    color = VectorAthletePalette.tankFold.copy(alpha = 0.55f),
+    style = Stroke(width = (shoulderSpan * 0.028f).coerceAtLeast(0.9f), cap = StrokeCap.Round, join = StrokeJoin.Round)
   )
 }
 
 /**
- * Draws the side/3/4 profile upper body wearing the sky-blue sleeveless tank top with warm tan shoulder/neck.
+ * Draws the side/3/4 profile upper body wearing the sky-blue sleeveless tank top with muscular chest,
+ * upper back sweep, rounded deltoid cap, and neck connected directly into [headCenter].
  */
 internal fun DrawScope.drawVectorSideTankTorso(
   shoulder: Offset,
   hip: Offset,
   chestDepth: Float,
-  facingDir: Int
+  facingDir: Int,
+  headCenter: Offset? = null
 ) {
   val dx = hip.x - shoulder.x
   val dy = hip.y - shoulder.y
@@ -494,25 +605,42 @@ internal fun DrawScope.drawVectorSideTankTorso(
   val fx = uy * facingDir
   val fy = -ux * facingDir
 
-  // Warm tan neck & top shoulder curve
-  val neckTop = Offset(shoulder.x - ux * chestDepth * 0.65f, shoulder.y - uy * chestDepth * 0.65f)
-  drawLine(
-    color = VectorAthletePalette.skinBase,
-    start = neckTop,
-    end = shoulder,
-    strokeWidth = chestDepth * 0.68f,
-    cap = StrokeCap.Round
+  // Warm tan muscular neck connected seamlessly toward headCenter + fuller rounded deltoid cap
+  val neckBase = Offset(
+    shoulder.x - ux * chestDepth * 0.12f,
+    shoulder.y - uy * chestDepth * 0.12f
   )
-  drawCircle(VectorAthletePalette.skinBase, chestDepth * 0.44f, shoulder)
+  val neckEnd = if (headCenter != null) {
+    lerpOffset(neckBase, headCenter, 0.88f)
+  } else {
+    Offset(shoulder.x - ux * chestDepth * 0.72f, shoulder.y - uy * chestDepth * 0.72f)
+  }
+  drawVectorSegment(
+    start = neckBase,
+    end = neckEnd,
+    startRadius = chestDepth * 0.30f,
+    bellyRadius = chestDepth * 0.27f,
+    endRadius = chestDepth * 0.24f,
+    isFarLimb = false,
+    bellyBias = 0.45f
+  )
+  val deltRadius = chestDepth * 0.41f
+  drawCircle(VectorAthletePalette.skinBase, deltRadius, shoulder)
+  drawCircle(
+    color = VectorAthletePalette.skinShadow.copy(alpha = 0.36f),
+    radius = deltRadius * 0.86f,
+    center = shoulder,
+    style = Stroke(width = (chestDepth * 0.055f).coerceAtLeast(0.9f))
+  )
 
-  // Sky-blue tank top body wrapping chest -> waist -> hip hem
+  // Sky-blue tank top body wrapping fuller chest -> tapered waist -> hip hem
   val topFront = Offset(
-    shoulder.x + ux * (len * 0.04f) + fx * (chestDepth * 0.45f),
-    shoulder.y + uy * (len * 0.04f) + fy * (chestDepth * 0.45f)
+    shoulder.x + ux * (len * 0.10f) + fx * (chestDepth * 0.50f),
+    shoulder.y + uy * (len * 0.10f) + fy * (chestDepth * 0.50f)
   )
   val midChest = Offset(
-    shoulder.x + ux * (len * 0.30f) + fx * (chestDepth * 0.72f),
-    shoulder.y + uy * (len * 0.30f) + fy * (chestDepth * 0.72f)
+    shoulder.x + ux * (len * 0.32f) + fx * (chestDepth * 0.77f),
+    shoulder.y + uy * (len * 0.32f) + fy * (chestDepth * 0.77f)
   )
   val hipFront = Offset(
     hip.x + ux * (chestDepth * 0.14f) + fx * (chestDepth * 0.56f),
@@ -523,12 +651,12 @@ internal fun DrawScope.drawVectorSideTankTorso(
     hip.y + uy * (chestDepth * 0.14f) - fy * (chestDepth * 0.54f)
   )
   val midBack = Offset(
-    shoulder.x + ux * (len * 0.32f) - fx * (chestDepth * 0.58f),
-    shoulder.y + uy * (len * 0.32f) - fy * (chestDepth * 0.58f)
+    shoulder.x + ux * (len * 0.34f) - fx * (chestDepth * 0.62f),
+    shoulder.y + uy * (len * 0.34f) - fy * (chestDepth * 0.62f)
   )
   val topBack = Offset(
-    shoulder.x - ux * (len * 0.04f) - fx * (chestDepth * 0.36f),
-    shoulder.y - uy * (len * 0.04f) - fy * (chestDepth * 0.36f)
+    shoulder.x - ux * (len * 0.02f) - fx * (chestDepth * 0.38f),
+    shoulder.y - uy * (len * 0.02f) - fy * (chestDepth * 0.38f)
   )
 
   val tankPath = Path().apply {
@@ -536,6 +664,12 @@ internal fun DrawScope.drawVectorSideTankTorso(
     cubicTo(midChest.x, midChest.y, midChest.x, midChest.y, hipFront.x, hipFront.y)
     lineTo(hipBack.x, hipBack.y)
     cubicTo(midBack.x, midBack.y, midBack.x, midBack.y, topBack.x, topBack.y)
+    quadraticTo(
+      shoulder.x + ux * (len * 0.06f) + fx * (chestDepth * 0.08f),
+      shoulder.y + uy * (len * 0.06f) + fy * (chestDepth * 0.08f),
+      topFront.x,
+      topFront.y
+    )
     close()
   }
   drawPath(tankPath, VectorAthletePalette.tankBlue)
@@ -590,7 +724,7 @@ internal fun DrawScope.drawVectorSegment(
 }
 
 /**
- * Draws a clean flat-vector human arm (smooth shoulder, tapered bicep & forearm, articulated gripping hand).
+ * Draws a muscular flat-vector human arm (rounded shoulder, defined bicep & forearm, articulated gripping hand).
  */
 internal fun DrawScope.drawVectorArm(
   shoulder: Offset,
@@ -605,22 +739,35 @@ internal fun DrawScope.drawVectorArm(
   drawVectorSegment(
     start = shoulder,
     end = elbow,
-    startRadius = 4.3f * unit,
-    bellyRadius = 4.7f * unit,
-    endRadius = 3.6f * unit,
+    startRadius = 4.9f * unit,
+    bellyRadius = 5.5f * unit,
+    endRadius = 4.0f * unit,
     isFarLimb = isFarArm,
-    bellyBias = 0.46f
+    bellyBias = 0.44f
   )
 
   drawVectorSegment(
     start = elbow,
     end = wrist,
-    startRadius = 3.6f * unit,
-    bellyRadius = 3.8f * unit,
-    endRadius = 2.6f * unit,
+    startRadius = 4.0f * unit,
+    bellyRadius = 4.3f * unit,
+    endRadius = 2.8f * unit,
     isFarLimb = isFarArm,
-    bellyBias = 0.28f
+    bellyBias = 0.26f
   )
+
+  // Subtle upper-arm bicep/tricep definition contour on near arm
+  if (!isFarArm && hypot(elbow.x - shoulder.x, elbow.y - shoulder.y) > 8f * unit) {
+    val cutStart = lerpOffset(shoulder, elbow, 0.28f)
+    val cutEnd = lerpOffset(shoulder, elbow, 0.72f)
+    drawLine(
+      color = VectorAthletePalette.skinShadow.copy(alpha = 0.42f),
+      start = cutStart,
+      end = cutEnd,
+      strokeWidth = (0.9f * unit).coerceAtLeast(0.8f),
+      cap = StrokeCap.Round
+    )
+  }
 
   // Articulated rounded hand & folded thumb
   val angleRad = atan2(wrist.y - elbow.y, wrist.x - elbow.x)
@@ -628,12 +775,12 @@ internal fun DrawScope.drawVectorArm(
     x = wrist.x + cos(angleRad) * 1.4f * unit,
     y = wrist.y + sin(angleRad) * 1.4f * unit
   )
-  drawCircle(skinFill, 3.4f * unit, handCenter)
-  drawCircle(handShadow, 3.4f * unit, handCenter, style = Stroke(0.8f * unit))
+  drawCircle(skinFill, 3.5f * unit, handCenter)
+  drawCircle(handShadow, 3.5f * unit, handCenter, style = Stroke(0.8f * unit))
 }
 
 /**
- * Draws a clean flat-vector leg (thigh, calf, white crew sock, and white/blue athletic sneaker).
+ * Draws a muscular flat-vector leg (athletic quad sweep, defined calf, white crew sock, and sneaker).
  */
 internal fun DrawScope.drawVectorLeg(
   hip: Offset,
@@ -648,21 +795,21 @@ internal fun DrawScope.drawVectorLeg(
   drawVectorSegment(
     start = hip,
     end = knee,
-    startRadius = 6.0f * unit,
-    bellyRadius = 6.2f * unit,
-    endRadius = 4.5f * unit,
+    startRadius = 6.6f * unit,
+    bellyRadius = 7.2f * unit,
+    endRadius = 4.9f * unit,
     isFarLimb = isFarLeg,
-    bellyBias = 0.42f
+    bellyBias = 0.44f
   )
 
   drawVectorSegment(
     start = knee,
     end = ankle,
-    startRadius = 4.4f * unit,
-    bellyRadius = 4.8f * unit,
-    endRadius = 2.9f * unit,
+    startRadius = 4.8f * unit,
+    bellyRadius = 5.5f * unit,
+    endRadius = 3.1f * unit,
     isFarLimb = isFarLeg,
-    bellyBias = 0.34f
+    bellyBias = 0.30f
   )
 
   if (drawShoe) {

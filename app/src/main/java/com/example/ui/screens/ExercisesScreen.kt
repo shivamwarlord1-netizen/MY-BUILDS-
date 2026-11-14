@@ -35,9 +35,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SlowMotionVideo
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,6 +53,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +67,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,12 +78,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.exercise.Exercise
 import com.example.data.exercise.ExerciseDatabase
+import com.example.data.exercise.ExerciseTier
 import com.example.data.exercise.MuscleGroup
 import com.example.ui.components.AnimatedExerciseFigure
 import com.example.ui.components.InteractiveAnatomyHeatmap
 import com.example.ui.components.MedicalDisclaimerBanner
 import com.example.ui.components.bounceClick
 import com.example.ui.components.pressBounce
+import com.example.ui.theme.kinetiqColors
 import com.example.ui.viewmodel.WellnessViewModel
 
 /**
@@ -90,22 +100,31 @@ fun ExercisesScreen(
   viewModel: WellnessViewModel,
   modifier: Modifier = Modifier
 ) {
+  var selectedTier by remember { mutableStateOf(ExerciseTier.BEGINNER) }
   var selectedGroup by remember { mutableStateOf<MuscleGroup?>(null) }
   var selectedExercise by remember { mutableStateOf<Exercise?>(null) }
   // User-initiated playback only: null means ALL cards remain calm/static until tapped
   var playingExerciseId by remember { mutableStateOf<String?>(null) }
 
-  val filteredExercises = remember(selectedGroup) {
-    ExerciseDatabase.getExercisesByGroup(selectedGroup)
+  val beginnerCount = remember { ExerciseDatabase.getExercisesByTier(ExerciseTier.BEGINNER).size }
+  val intermediateCount = remember { ExerciseDatabase.getExercisesByTier(ExerciseTier.INTERMEDIATE).size }
+
+  val filteredExercises = remember(selectedTier, selectedGroup) {
+    ExerciseDatabase.getExercisesByTierAndGroup(selectedTier, selectedGroup)
   }
 
-  LaunchedEffect(filteredExercises) {
+  LaunchedEffect(selectedTier, filteredExercises) {
     if (playingExerciseId != null && filteredExercises.none { it.id == playingExerciseId }) {
       playingExerciseId = null
     }
   }
 
   val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
+  val beginnerAccent = semanticColors.water
+  val onBeginnerAccent = if (semanticColors.isLight) Color.White else semanticColors.background
+  val tierAccent = if (selectedTier == ExerciseTier.BEGINNER) beginnerAccent else colorScheme.primary
+  val onTierAccent = if (selectedTier == ExerciseTier.BEGINNER) onBeginnerAccent else colorScheme.onPrimary
 
   LazyColumn(
     modifier = modifier.fillMaxSize(),
@@ -126,13 +145,13 @@ fun ExercisesScreen(
             Box(
               modifier = Modifier
                 .size(32.dp)
-                .background(colorScheme.primary.copy(alpha = 0.18f), CircleShape),
+                .background(tierAccent.copy(alpha = 0.18f), CircleShape),
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.FitnessCenter,
                 contentDescription = null,
-                tint = colorScheme.primary,
+                tint = tierAccent,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -143,7 +162,7 @@ fun ExercisesScreen(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.2.sp
               ),
-              color = colorScheme.primary
+              color = tierAccent
             )
           }
           Spacer(modifier = Modifier.height(3.dp))
@@ -162,7 +181,7 @@ fun ExercisesScreen(
         Surface(
           shape = RoundedCornerShape(10.dp),
           color = colorScheme.surface,
-          border = BorderStroke(0.8.dp, colorScheme.outline.copy(alpha = 0.65f))
+          border = BorderStroke(0.8.dp, tierAccent.copy(alpha = 0.55f))
         ) {
           Text(
             text = "${filteredExercises.size} MOVES",
@@ -171,14 +190,119 @@ fun ExercisesScreen(
               fontSize = 10.sp,
               letterSpacing = 0.8.sp
             ),
-            color = colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
+            color = tierAccent,
+            modifier = Modifier
+              .padding(horizontal = 9.dp, vertical = 6.dp)
+              .testTag("exercises_move_count")
           )
         }
       }
     }
 
-    // Muscle Group Filter Chips
+    // Dedicated Beginner & Intermediate Subtab Row
+    item(key = "exercise_tier_subtabs") {
+      val selectedTabIndex = selectedTier.ordinal
+      Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = colorScheme.surface,
+        border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.55f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        TabRow(
+          selectedTabIndex = selectedTabIndex,
+          containerColor = Color.Transparent,
+          contentColor = colorScheme.onSurface,
+          divider = {},
+          indicator = { tabPositions ->
+            if (selectedTabIndex < tabPositions.size) {
+              TabRowDefaults.SecondaryIndicator(
+                modifier = Modifier
+                  .tabIndicatorOffset(tabPositions[selectedTabIndex])
+                  .padding(horizontal = 18.dp)
+                  .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)),
+                height = 3.dp,
+                color = tierAccent
+              )
+            }
+          },
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("exercise_tier_tab_row")
+        ) {
+          val tabs = listOf(
+            Triple(ExerciseTier.BEGINNER, beginnerCount, beginnerAccent),
+            Triple(ExerciseTier.INTERMEDIATE, intermediateCount, colorScheme.primary)
+          )
+          tabs.forEach { (tier, count, tabColor) ->
+            val isSelected = selectedTier == tier
+            Tab(
+              selected = isSelected,
+              onClick = {
+                if (selectedTier != tier) {
+                  playingExerciseId = null
+                  selectedTier = tier
+                }
+              },
+              modifier = Modifier
+                .heightIn(min = 48.dp)
+                .testTag("exercise_tier_tab_${tier.name.lowercase()}")
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+              ) {
+                Icon(
+                  imageVector = if (tier == ExerciseTier.BEGINNER) Icons.Default.Shield else Icons.Default.TrendingUp,
+                  contentDescription = null,
+                  tint = if (isSelected) tabColor else colorScheme.onSurfaceVariant,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = tier.displayName,
+                  style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
+                    fontSize = 13.5.sp
+                  ),
+                  color = if (isSelected) colorScheme.onSurface else colorScheme.onSurfaceVariant,
+                  maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Surface(
+                  shape = RoundedCornerShape(8.dp),
+                  color = if (isSelected) tabColor.copy(alpha = 0.18f) else colorScheme.surfaceVariant,
+                  border = BorderStroke(
+                    0.8.dp,
+                    if (isSelected) tabColor.copy(alpha = 0.55f) else colorScheme.outline.copy(alpha = 0.45f)
+                  )
+                ) {
+                  Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                      fontWeight = FontWeight.Bold,
+                      fontSize = 10.sp
+                    ),
+                    color = if (isSelected) tabColor else colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Distinct Space Banner for Beginner vs Intermediate
+    item(key = "tier_space_banner_${selectedTier.name}") {
+      ExerciseTierSpaceBanner(
+        tier = selectedTier,
+        accentColor = tierAccent
+      )
+    }
+
+    // Muscle Group Filter Chips (scoped to active Beginner / Intermediate space)
     item(key = "muscle_group_filters") {
       LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -196,16 +320,16 @@ fun ExercisesScreen(
                 text = "All",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isAllSelected) colorScheme.onPrimary else colorScheme.onSurface
+                color = if (isAllSelected) onTierAccent else colorScheme.onSurface
               )
             },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = colorScheme.primary,
+              selectedContainerColor = tierAccent,
               containerColor = colorScheme.surface
             ),
             border = BorderStroke(
               width = 0.8.dp,
-              color = if (isAllSelected) colorScheme.primary else colorScheme.outline.copy(alpha = 0.7f)
+              color = if (isAllSelected) tierAccent else colorScheme.outline.copy(alpha = 0.7f)
             ),
             modifier = Modifier
               .testTag("filter_chip_all")
@@ -225,16 +349,16 @@ fun ExercisesScreen(
                 text = group.displayName,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) colorScheme.onPrimary else colorScheme.onSurface
+                color = if (isSelected) onTierAccent else colorScheme.onSurface
               )
             },
             colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = colorScheme.primary,
+              selectedContainerColor = tierAccent,
               containerColor = colorScheme.surface
             ),
             border = BorderStroke(
               width = 0.8.dp,
-              color = if (isSelected) colorScheme.primary else colorScheme.outline.copy(alpha = 0.7f)
+              color = if (isSelected) tierAccent else colorScheme.outline.copy(alpha = 0.7f)
             ),
             modifier = Modifier
               .testTag("filter_chip_${group.name.lowercase()}")
@@ -244,19 +368,37 @@ fun ExercisesScreen(
       }
     }
 
-    // Exercise Cards
-    items(filteredExercises, key = { it.id }) { exercise ->
-      VisualLeapExerciseCard(
-        exercise = exercise,
-        isPlaying = playingExerciseId == exercise.id,
-        onTogglePlay = {
-          playingExerciseId = if (playingExerciseId == exercise.id) null else exercise.id
-        },
-        onClick = {
-          playingExerciseId = null
-          selectedExercise = exercise
-        }
-      )
+    if (filteredExercises.isEmpty() && selectedGroup != null) {
+      item(key = "empty_tier_group_${selectedTier.name}_${selectedGroup?.name}") {
+        EmptyTierGroupCard(
+          currentTier = selectedTier,
+          muscleGroup = selectedGroup!!,
+          accentColor = tierAccent,
+          onAccentColor = onTierAccent,
+          onSwitchTier = { targetTier ->
+            playingExerciseId = null
+            selectedTier = targetTier
+          },
+          onResetGroup = { selectedGroup = null }
+        )
+      }
+    } else {
+      // Exercise Cards for Active Subtab
+      items(filteredExercises, key = { "${selectedTier.name}_${it.id}" }) { exercise ->
+        VisualLeapExerciseCard(
+          exercise = exercise,
+          accentColor = tierAccent,
+          onAccentColor = onTierAccent,
+          isPlaying = playingExerciseId == exercise.id,
+          onTogglePlay = {
+            playingExerciseId = if (playingExerciseId == exercise.id) null else exercise.id
+          },
+          onClick = {
+            playingExerciseId = null
+            selectedExercise = exercise
+          }
+        )
+      }
     }
 
     item(key = "exercises_disclaimer") {
@@ -269,12 +411,233 @@ fun ExercisesScreen(
   if (selectedExercise != null) {
     VisualExerciseInspectionModal(
       exercise = selectedExercise!!,
+      accentColor = tierAccent,
+      onAccentColor = onTierAccent,
       onDismiss = { selectedExercise = null },
       onLogActivity = {
         viewModel.logSteps(800)
         selectedExercise = null
       }
     )
+  }
+}
+
+@Composable
+private fun ExerciseTierSpaceBanner(
+  tier: ExerciseTier,
+  accentColor: Color
+) {
+  val colorScheme = MaterialTheme.colorScheme
+  val isBeginner = tier == ExerciseTier.BEGINNER
+
+  val badgeLabel = if (isBeginner) "FOUNDATION SPACE" else "PROGRESSION SPACE"
+  val title = if (isBeginner) {
+    "Form First & Joint-Friendly Control"
+  } else {
+    "Compound Strength & Core Power"
+  }
+  val subtitle = if (isBeginner) {
+    "Guided cable and isolation movements designed to lock in posture, mind-muscle connection, and smooth tempo."
+  } else {
+    "Loaded multi-joint lifts and athletic core builders for progressive overload, including 2 advanced barbell challenges."
+  }
+  val cues = if (isBeginner) {
+    listOf("Tempo 2-1-2", "Rest 60–90s", "Moderate Load")
+  } else {
+    listOf("Tempo 3-1-1", "Rest 90–120s", "Progressive Load")
+  }
+
+  Surface(
+    shape = RoundedCornerShape(18.dp),
+    color = colorScheme.surfaceVariant,
+    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.42f)),
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("exercise_space_banner_${tier.name.lowercase()}")
+  ) {
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .background(
+          Brush.horizontalGradient(
+            colors = listOf(
+              accentColor.copy(alpha = 0.14f),
+              Color.Transparent
+            )
+          )
+        )
+        .padding(16.dp)
+    ) {
+      Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = accentColor.copy(alpha = 0.16f),
+            border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.5f))
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = if (isBeginner) Icons.Default.Shield else Icons.Default.TrendingUp,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(5.dp))
+              Text(
+                text = badgeLabel,
+                style = MaterialTheme.typography.labelSmall.copy(
+                  fontWeight = FontWeight.Black,
+                  fontSize = 9.5.sp,
+                  letterSpacing = 0.9.sp
+                ),
+                color = accentColor
+              )
+            }
+          }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Text(
+          text = title,
+          style = MaterialTheme.typography.titleMedium.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.5.sp
+          ),
+          color = colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+          text = subtitle,
+          style = MaterialTheme.typography.bodySmall.copy(
+            fontSize = 12.sp,
+            lineHeight = 17.sp
+          ),
+          color = colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          cues.forEach { cue ->
+            Surface(
+              shape = RoundedCornerShape(8.dp),
+              color = colorScheme.surface,
+              border = BorderStroke(0.8.dp, colorScheme.outline.copy(alpha = 0.45f))
+            ) {
+              Text(
+                text = cue,
+                style = MaterialTheme.typography.labelSmall.copy(
+                  fontWeight = FontWeight.SemiBold,
+                  fontSize = 10.sp
+                ),
+                color = colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun EmptyTierGroupCard(
+  currentTier: ExerciseTier,
+  muscleGroup: MuscleGroup,
+  accentColor: Color,
+  onAccentColor: Color,
+  onSwitchTier: (ExerciseTier) -> Unit,
+  onResetGroup: () -> Unit
+) {
+  val otherTier = if (currentTier == ExerciseTier.BEGINNER) {
+    ExerciseTier.INTERMEDIATE
+  } else {
+    ExerciseTier.BEGINNER
+  }
+  val otherCount = remember(otherTier, muscleGroup) {
+    ExerciseDatabase.getExercisesByTierAndGroup(otherTier, muscleGroup).size
+  }
+  val colorScheme = MaterialTheme.colorScheme
+
+  Surface(
+    shape = RoundedCornerShape(18.dp),
+    color = colorScheme.surfaceVariant,
+    border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.6f)),
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("empty_tier_group_card")
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(18.dp),
+      horizontalAlignment = Alignment.Start
+    ) {
+      Text(
+        text = "No ${currentTier.displayName} ${muscleGroup.displayName} Moves",
+        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+        color = colorScheme.onSurface
+      )
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(
+        text = if (otherCount > 0) {
+          "All $otherCount ${muscleGroup.displayName} movements are organized inside the ${otherTier.displayName} space."
+        } else {
+          "Try resetting the muscle group filter to explore all ${currentTier.displayName} exercises."
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = colorScheme.onSurfaceVariant
+      )
+      Spacer(modifier = Modifier.height(12.dp))
+      Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (otherCount > 0) {
+          Button(
+            onClick = { onSwitchTier(otherTier) },
+            colors = ButtonDefaults.buttonColors(
+              containerColor = accentColor,
+              contentColor = onAccentColor
+            ),
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+              .heightIn(min = 48.dp)
+              .testTag("switch_to_${otherTier.name.lowercase()}_button")
+          ) {
+            Text(
+              text = "Open ${otherTier.displayName} (${otherCount})",
+              fontWeight = FontWeight.Bold,
+              fontSize = 12.sp
+            )
+          }
+        }
+        OutlinedButton(
+          onClick = onResetGroup,
+          shape = RoundedCornerShape(10.dp),
+          border = BorderStroke(1.dp, colorScheme.outline.copy(alpha = 0.6f)),
+          modifier = Modifier.heightIn(min = 48.dp)
+        ) {
+          Text(
+            text = "Show All",
+            color = colorScheme.onSurface,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+          )
+        }
+      }
+    }
   }
 }
 
@@ -285,6 +648,8 @@ fun ExercisesScreen(
 @Composable
 private fun VisualLeapExerciseCard(
   exercise: Exercise,
+  accentColor: Color,
+  onAccentColor: Color,
   isPlaying: Boolean,
   onTogglePlay: () -> Unit,
   onClick: () -> Unit
@@ -293,8 +658,11 @@ private fun VisualLeapExerciseCard(
   var previewPeakPose by remember(exercise.id) { mutableStateOf(false) }
 
   val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   val pillBg = colorScheme.surfaceVariant.copy(alpha = 0.96f)
   val borderSubtle = colorScheme.outline.copy(alpha = 0.72f)
+  val isAdvanced = exercise.difficulty.equals("Advanced", ignoreCase = true)
+  val difficultyBadgeColor = if (isAdvanced) semanticColors.habits else accentColor
 
   Card(
     modifier = Modifier
@@ -312,7 +680,7 @@ private fun VisualLeapExerciseCard(
           AnimatedExerciseFigure(
             exerciseId = exercise.id,
             height = 176.dp,
-            primaryColor = colorScheme.primary,
+            primaryColor = accentColor,
             isPlaying = isPlaying,
             staticPhase = if (previewPeakPose) 1f else 0f
           )
@@ -327,10 +695,10 @@ private fun VisualLeapExerciseCard(
           ) {
             Surface(
               shape = RoundedCornerShape(9.dp),
-              color = if (isPlaying) colorScheme.primary else pillBg,
+              color = if (isPlaying) accentColor else pillBg,
               border = BorderStroke(
                 width = 0.8.dp,
-                color = if (isPlaying) colorScheme.primary else borderSubtle
+                color = if (isPlaying) accentColor else borderSubtle
               ),
               modifier = Modifier
                 .heightIn(min = 32.dp)
@@ -345,7 +713,7 @@ private fun VisualLeapExerciseCard(
                 Icon(
                   imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                   contentDescription = if (isPlaying) "Pause ${exercise.name}" else "Animate ${exercise.name}",
-                  tint = if (isPlaying) colorScheme.onPrimary else colorScheme.primary,
+                  tint = if (isPlaying) onAccentColor else accentColor,
                   modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -356,7 +724,7 @@ private fun VisualLeapExerciseCard(
                     fontSize = 9.sp,
                     letterSpacing = 0.6.sp
                   ),
-                  color = if (isPlaying) colorScheme.onPrimary else colorScheme.onSurface
+                  color = if (isPlaying) onAccentColor else colorScheme.onSurface
                 )
               }
             }
@@ -367,7 +735,7 @@ private fun VisualLeapExerciseCard(
                 color = pillBg,
                 border = BorderStroke(
                   width = 0.8.dp,
-                  color = if (previewPeakPose) colorScheme.primary.copy(alpha = 0.85f) else borderSubtle
+                  color = if (previewPeakPose) accentColor.copy(alpha = 0.85f) else borderSubtle
                 ),
                 modifier = Modifier
                   .heightIn(min = 32.dp)
@@ -382,7 +750,7 @@ private fun VisualLeapExerciseCard(
                   Icon(
                     imageVector = Icons.Default.SwapHoriz,
                     contentDescription = if (previewPeakPose) "View setup pose" else "View peak squeeze pose",
-                    tint = if (previewPeakPose) colorScheme.primary else colorScheme.onSurfaceVariant,
+                    tint = if (previewPeakPose) accentColor else colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(13.dp)
                   )
                   Spacer(modifier = Modifier.width(3.dp))
@@ -393,7 +761,7 @@ private fun VisualLeapExerciseCard(
                       fontSize = 8.5.sp,
                       letterSpacing = 0.5.sp
                     ),
-                    color = if (previewPeakPose) colorScheme.primary else colorScheme.onSurfaceVariant
+                    color = if (previewPeakPose) accentColor else colorScheme.onSurfaceVariant
                   )
                 }
               }
@@ -403,7 +771,7 @@ private fun VisualLeapExerciseCard(
           InteractiveAnatomyHeatmap(
             exercise = exercise,
             height = 176.dp,
-            primaryColor = colorScheme.primary,
+            primaryColor = accentColor,
             secondaryColor = colorScheme.tertiary
           )
         }
@@ -411,10 +779,10 @@ private fun VisualLeapExerciseCard(
         // Top-right Overlay Switcher Pill (Pose Demo <-> Muscle Heatmap)
         Surface(
           shape = RoundedCornerShape(9.dp),
-          color = if (showHeatmapOverlay) colorScheme.primary else pillBg,
+          color = if (showHeatmapOverlay) accentColor else pillBg,
           border = BorderStroke(
             width = 0.8.dp,
-            color = if (showHeatmapOverlay) colorScheme.primary else borderSubtle
+            color = if (showHeatmapOverlay) accentColor else borderSubtle
           ),
           modifier = Modifier
             .align(Alignment.TopEnd)
@@ -436,7 +804,7 @@ private fun VisualLeapExerciseCard(
             Icon(
               imageVector = if (showHeatmapOverlay) Icons.Default.FitnessCenter else Icons.Default.AccessibilityNew,
               contentDescription = if (showHeatmapOverlay) "Show exercise pose" else "Show muscle heatmap",
-              tint = if (showHeatmapOverlay) colorScheme.onPrimary else colorScheme.onSurface,
+              tint = if (showHeatmapOverlay) onAccentColor else colorScheme.onSurface,
               modifier = Modifier.size(13.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -447,7 +815,7 @@ private fun VisualLeapExerciseCard(
                 fontSize = 9.sp,
                 letterSpacing = 0.6.sp
               ),
-              color = if (showHeatmapOverlay) colorScheme.onPrimary else colorScheme.onSurface
+              color = if (showHeatmapOverlay) onAccentColor else colorScheme.onSurface
             )
           }
         }
@@ -480,7 +848,7 @@ private fun VisualLeapExerciseCard(
               fontSize = 10.sp,
               letterSpacing = 0.7.sp
             ),
-            color = colorScheme.primary,
+            color = accentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
@@ -491,8 +859,8 @@ private fun VisualLeapExerciseCard(
         // Sets & Reps Pill
         Surface(
           shape = RoundedCornerShape(10.dp),
-          color = colorScheme.primary.copy(alpha = 0.14f),
-          border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.4f))
+          color = accentColor.copy(alpha = 0.14f),
+          border = BorderStroke(1.dp, accentColor.copy(alpha = 0.4f))
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -501,7 +869,7 @@ private fun VisualLeapExerciseCard(
             Icon(
               imageVector = Icons.Default.Timer,
               contentDescription = null,
-              tint = colorScheme.primary,
+              tint = accentColor,
               modifier = Modifier.size(13.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -511,7 +879,7 @@ private fun VisualLeapExerciseCard(
                 fontWeight = FontWeight.Black,
                 fontSize = 10.5.sp
               ),
-              color = colorScheme.primary
+              color = accentColor
             )
           }
         }
@@ -545,7 +913,8 @@ private fun VisualLeapExerciseCard(
 
           Surface(
             shape = RoundedCornerShape(6.dp),
-            color = colorScheme.surface
+            color = if (isAdvanced) difficultyBadgeColor.copy(alpha = 0.16f) else colorScheme.surface,
+            border = if (isAdvanced) BorderStroke(0.8.dp, difficultyBadgeColor.copy(alpha = 0.5f)) else null
           ) {
             Row(
               modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
@@ -554,14 +923,17 @@ private fun VisualLeapExerciseCard(
               Icon(
                 imageVector = Icons.Default.Bolt,
                 contentDescription = null,
-                tint = colorScheme.primary,
+                tint = difficultyBadgeColor,
                 modifier = Modifier.size(11.dp)
               )
               Spacer(modifier = Modifier.width(2.dp))
               Text(
                 text = exercise.difficulty,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                color = colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelSmall.copy(
+                  fontSize = 10.sp,
+                  fontWeight = if (isAdvanced) FontWeight.Bold else FontWeight.Medium
+                ),
+                color = if (isAdvanced) difficultyBadgeColor else colorScheme.onSurfaceVariant
               )
             }
           }
@@ -574,14 +946,14 @@ private fun VisualLeapExerciseCard(
             text = "Guide",
             style = MaterialTheme.typography.labelSmall.copy(
               fontWeight = FontWeight.Bold,
-              color = colorScheme.primary
+              color = accentColor
             )
           )
           Spacer(modifier = Modifier.width(2.dp))
           Icon(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = null,
-            tint = colorScheme.primary,
+            tint = accentColor,
             modifier = Modifier.size(15.dp)
           )
         }
@@ -599,6 +971,8 @@ private fun VisualLeapExerciseCard(
 @Composable
 private fun VisualExerciseInspectionModal(
   exercise: Exercise,
+  accentColor: Color,
+  onAccentColor: Color,
   onDismiss: () -> Unit,
   onLogActivity: () -> Unit
 ) {
@@ -647,7 +1021,7 @@ private fun VisualExerciseInspectionModal(
             Text(
               text = "${exercise.muscleGroup.displayName.uppercase()} • ${exercise.recommendedSetsReps}",
               style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-              color = colorScheme.primary
+              color = accentColor
             )
           }
 
@@ -684,8 +1058,8 @@ private fun VisualExerciseInspectionModal(
           ) {
             Surface(
               shape = RoundedCornerShape(10.dp),
-              color = if (!showModalHeatmap) colorScheme.primary else colorScheme.surface,
-              border = BorderStroke(0.8.dp, if (!showModalHeatmap) colorScheme.primary else borderSubtle),
+              color = if (!showModalHeatmap) accentColor else colorScheme.surface,
+              border = BorderStroke(0.8.dp, if (!showModalHeatmap) accentColor else borderSubtle),
               modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 42.dp)
@@ -701,22 +1075,22 @@ private fun VisualExerciseInspectionModal(
                 Icon(
                   imageVector = Icons.Default.FitnessCenter,
                   contentDescription = null,
-                  tint = if (!showModalHeatmap) colorScheme.onPrimary else colorScheme.onSurface,
+                  tint = if (!showModalHeatmap) onAccentColor else colorScheme.onSurface,
                   modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                   text = "Movement Demo",
                   style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                  color = if (!showModalHeatmap) colorScheme.onPrimary else colorScheme.onSurface
+                  color = if (!showModalHeatmap) onAccentColor else colorScheme.onSurface
                 )
               }
             }
 
             Surface(
               shape = RoundedCornerShape(10.dp),
-              color = if (showModalHeatmap) colorScheme.primary else colorScheme.surface,
-              border = BorderStroke(0.8.dp, if (showModalHeatmap) colorScheme.primary else borderSubtle),
+              color = if (showModalHeatmap) accentColor else colorScheme.surface,
+              border = BorderStroke(0.8.dp, if (showModalHeatmap) accentColor else borderSubtle),
               modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 42.dp)
@@ -735,14 +1109,14 @@ private fun VisualExerciseInspectionModal(
                 Icon(
                   imageVector = Icons.Default.AccessibilityNew,
                   contentDescription = null,
-                  tint = if (showModalHeatmap) colorScheme.onPrimary else colorScheme.onSurface,
+                  tint = if (showModalHeatmap) onAccentColor else colorScheme.onSurface,
                   modifier = Modifier.size(15.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                   text = "Muscle Heatmap",
                   style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                  color = if (showModalHeatmap) colorScheme.onPrimary else colorScheme.onSurface
+                  color = if (showModalHeatmap) onAccentColor else colorScheme.onSurface
                 )
               }
             }
@@ -752,7 +1126,7 @@ private fun VisualExerciseInspectionModal(
             AnimatedExerciseFigure(
               exerciseId = exercise.id,
               height = 204.dp,
-              primaryColor = colorScheme.primary,
+              primaryColor = accentColor,
               isPlaying = isPlaying,
               staticPhase = if (previewPeakPose) 1f else 0f,
               speedMultiplier = if (isSlowMotion) 0.5f else 1.0f
@@ -768,8 +1142,8 @@ private fun VisualExerciseInspectionModal(
             ) {
               Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isPlaying) colorScheme.primary else colorScheme.surface,
-                border = BorderStroke(0.9.dp, if (isPlaying) colorScheme.primary else borderSubtle),
+                color = if (isPlaying) accentColor else colorScheme.surface,
+                border = BorderStroke(0.9.dp, if (isPlaying) accentColor else borderSubtle),
                 modifier = Modifier
                   .weight(1f)
                   .heightIn(min = 40.dp)
@@ -785,14 +1159,14 @@ private fun VisualExerciseInspectionModal(
                   Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause animation" else "Play animation",
-                    tint = if (isPlaying) colorScheme.onPrimary else colorScheme.primary,
+                    tint = if (isPlaying) onAccentColor else accentColor,
                     modifier = Modifier.size(16.dp)
                   )
                   Spacer(modifier = Modifier.width(5.dp))
                   Text(
                     text = if (isPlaying) "Pause Demo" else "Play Demo",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isPlaying) colorScheme.onPrimary else colorScheme.onSurface
+                    color = if (isPlaying) onAccentColor else colorScheme.onSurface
                   )
                 }
               }
@@ -803,7 +1177,7 @@ private fun VisualExerciseInspectionModal(
                   color = colorScheme.surface,
                   border = BorderStroke(
                     0.9.dp,
-                    if (previewPeakPose) colorScheme.primary else borderSubtle
+                    if (previewPeakPose) accentColor else borderSubtle
                   ),
                   modifier = Modifier
                     .heightIn(min = 40.dp)
@@ -818,7 +1192,7 @@ private fun VisualExerciseInspectionModal(
                     Icon(
                       imageVector = Icons.Default.SwapHoriz,
                       contentDescription = "Toggle Setup or Peak pose",
-                      tint = colorScheme.primary,
+                      tint = accentColor,
                       modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -833,10 +1207,10 @@ private fun VisualExerciseInspectionModal(
 
               Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isSlowMotion) colorScheme.primary.copy(alpha = 0.16f) else colorScheme.surface,
+                color = if (isSlowMotion) accentColor.copy(alpha = 0.16f) else colorScheme.surface,
                 border = BorderStroke(
                   0.9.dp,
-                  if (isSlowMotion) colorScheme.primary else borderSubtle
+                  if (isSlowMotion) accentColor else borderSubtle
                 ),
                 modifier = Modifier
                   .heightIn(min = 40.dp)
@@ -851,14 +1225,14 @@ private fun VisualExerciseInspectionModal(
                   Icon(
                     imageVector = Icons.Default.SlowMotionVideo,
                     contentDescription = "Toggle playback speed",
-                    tint = if (isSlowMotion) colorScheme.primary else colorScheme.onSurfaceVariant,
+                    tint = if (isSlowMotion) accentColor else colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(15.dp)
                   )
                   Spacer(modifier = Modifier.width(4.dp))
                   Text(
                     text = if (isSlowMotion) "0.5×" else "1.0×",
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isSlowMotion) colorScheme.primary else colorScheme.onSurface
+                    color = if (isSlowMotion) accentColor else colorScheme.onSurface
                   )
                 }
               }
@@ -867,7 +1241,7 @@ private fun VisualExerciseInspectionModal(
             InteractiveAnatomyHeatmap(
               exercise = exercise,
               height = 204.dp,
-              primaryColor = colorScheme.primary,
+              primaryColor = accentColor,
               secondaryColor = colorScheme.tertiary
             )
           }
@@ -889,7 +1263,7 @@ private fun VisualExerciseInspectionModal(
                   fontSize = 9.5.sp,
                   letterSpacing = 1.sp
                 ),
-                color = colorScheme.primary
+                color = accentColor
               )
               Spacer(modifier = Modifier.height(8.dp))
 
@@ -902,7 +1276,7 @@ private fun VisualExerciseInspectionModal(
                     modifier = Modifier
                       .padding(top = 5.dp)
                       .size(5.dp)
-                      .background(colorScheme.primary, CircleShape)
+                      .background(accentColor, CircleShape)
                   )
                   Spacer(modifier = Modifier.width(8.dp))
                   Text(
@@ -935,7 +1309,7 @@ private fun VisualExerciseInspectionModal(
               Icon(
                 imageVector = Icons.Default.Air,
                 contentDescription = null,
-                tint = colorScheme.primary,
+                tint = accentColor,
                 modifier = Modifier.size(16.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -1020,8 +1394,8 @@ private fun VisualExerciseInspectionModal(
           Button(
             onClick = onLogActivity,
             colors = ButtonDefaults.buttonColors(
-              containerColor = colorScheme.primary,
-              contentColor = colorScheme.onPrimary
+              containerColor = accentColor,
+              contentColor = onAccentColor
             ),
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier

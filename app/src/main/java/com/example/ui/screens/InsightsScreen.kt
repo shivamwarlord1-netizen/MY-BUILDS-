@@ -48,20 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.MedicalDisclaimerBanner
-import com.example.ui.theme.BioCyan
-import com.example.ui.theme.DuskIndigo
-import com.example.ui.theme.KineticViolet
-import com.example.ui.theme.KinetiqBorderGlow
-import com.example.ui.theme.KinetiqBorderSubtle
-import com.example.ui.theme.KinetiqCardSurface
-import com.example.ui.theme.KinetiqElevatedCard
-import com.example.ui.theme.KinetiqObsidianSurface
-import com.example.ui.theme.KinetiqPurpleNeon
-import com.example.ui.theme.KinetiqPurplePrimary
-import com.example.ui.theme.KinetiqTextMuted
-import com.example.ui.theme.KinetiqTextSubtle
-import com.example.ui.theme.KinetiqTextWhite
-import com.example.ui.theme.RadiantAmber
+import com.example.ui.theme.kinetiqColors
 import com.example.ui.viewmodel.WellnessUiState
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -95,6 +82,9 @@ fun InsightsScreen(
     ((doneCount.toFloat() / totalOpportunities) * 100).toInt().coerceIn(0, 100)
   } else 0
 
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
+
   LazyColumn(
     modifier = modifier
       .fillMaxSize()
@@ -109,19 +99,19 @@ fun InsightsScreen(
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.5.sp
           ),
-          color = KinetiqPurpleNeon
+          color = colorScheme.primary
         )
         Text(
           text = "Bio-Kinetic Insights",
           style = MaterialTheme.typography.headlineSmall.copy(
             fontWeight = FontWeight.Black,
-            color = KinetiqTextWhite
+            color = colorScheme.onBackground
           )
         )
         Text(
           text = "7-day holistic trend analysis computed strictly from on-device records.",
           style = MaterialTheme.typography.bodySmall,
-          color = KinetiqTextMuted
+          color = colorScheme.onSurfaceVariant
         )
       }
     }
@@ -141,11 +131,11 @@ fun InsightsScreen(
         title = "Kinetic Movement Output",
         subtitle = "7-Day Step Progression (Target: $targetSteps)",
         icon = Icons.Default.DirectionsWalk,
-        iconTint = KineticViolet,
+        iconTint = semanticColors.steps,
         dates = dates,
         values = weekSteps.map { it.toFloat() },
         targetValue = targetSteps.toFloat(),
-        barColor = KineticViolet,
+        barColor = semanticColors.steps,
         unitLabel = "steps",
         formatValue = { "${it.toInt()}" }
       )
@@ -156,11 +146,11 @@ fun InsightsScreen(
         title = "Restorative Sleep Duration",
         subtitle = "Nightly Sleep Hours (Target: ${String.format(Locale.US, "%.1f", targetSleep)}h)",
         icon = Icons.Default.Bedtime,
-        iconTint = DuskIndigo,
+        iconTint = semanticColors.sleep,
         dates = dates,
         values = weekSleepHours,
         targetValue = targetSleep,
-        barColor = DuskIndigo,
+        barColor = semanticColors.sleep,
         unitLabel = "hours",
         formatValue = { String.format(Locale.US, "%.1fh", it) }
       )
@@ -198,25 +188,27 @@ private fun WeeklyDigestCard(
   targetSleep: Float,
   habitRate: Int
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   Card(
     modifier = Modifier
       .fillMaxWidth()
       .border(
         width = 1.dp,
         brush = Brush.linearGradient(
-          colors = listOf(KinetiqPurpleNeon.copy(alpha = 0.5f), KinetiqBorderSubtle)
+          colors = listOf(colorScheme.primary.copy(alpha = 0.45f), colorScheme.outline.copy(alpha = 0.65f))
         ),
         shape = RoundedCornerShape(22.dp)
       ),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
           imageVector = Icons.Default.AutoAwesome,
           contentDescription = null,
-          tint = KinetiqPurpleNeon,
+          tint = colorScheme.primary,
           modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
@@ -227,7 +219,7 @@ private fun WeeklyDigestCard(
             letterSpacing = 1.2.sp,
             fontSize = 10.sp
           ),
-          color = KinetiqPurpleNeon
+          color = colorScheme.primary
         )
       }
 
@@ -252,7 +244,7 @@ private fun WeeklyDigestCard(
       Text(
         text = "$stepAnalysis\n\n$sleepAnalysis\n\n$habitAnalysis",
         style = MaterialTheme.typography.bodyMedium,
-        color = KinetiqTextWhite,
+        color = colorScheme.onSurface,
         lineHeight = 20.sp
       )
     }
@@ -280,12 +272,15 @@ private fun WeeklyBarChartCard(
     label = "bar_anim_fraction"
   )
 
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
+
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, KinetiqBorderSubtle, RoundedCornerShape(22.dp)),
+      .border(1.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(22.dp)),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -302,24 +297,25 @@ private fun WeeklyBarChartCard(
           Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = KinetiqTextWhite
+            color = colorScheme.onSurface
           )
           Text(
             text = subtitle,
             style = MaterialTheme.typography.labelSmall,
-            color = KinetiqTextMuted
+            color = colorScheme.onSurfaceVariant
           )
         }
       }
 
       Spacer(modifier = Modifier.height(20.dp))
 
-      // Custom Canvas Bar Chart with Dark Indigo Gridlines
+      // Custom Canvas Bar Chart with Theme Reference Line
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .height(140.dp)
       ) {
+        val targetLineColor = colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
         Canvas(modifier = Modifier.fillMaxSize()) {
           val count = dates.size.coerceAtLeast(1)
           val totalW = size.width
@@ -330,13 +326,13 @@ private fun WeeklyBarChartCard(
           // Draw Target Reference Line
           val targetY = totalH - ((targetValue / maxValue) * totalH)
           drawLine(
-            color = KinetiqBorderGlow.copy(alpha = 0.5f),
+            color = targetLineColor,
             start = Offset(0f, targetY),
             end = Offset(totalW, targetY),
             strokeWidth = 1.5.dp.toPx()
           )
 
-          // Draw Animated Glowing Bars
+          // Draw Animated Bars
           values.forEachIndexed { i, v ->
             val barH = (((v / maxValue) * totalH * animFraction)).coerceAtLeast(4.dp.toPx())
             val x = (i * spacing) + (spacing / 2) - (barW / 2)
@@ -376,7 +372,7 @@ private fun WeeklyBarChartCard(
               fontSize = 10.sp,
               letterSpacing = 0.5.sp
             ),
-            color = KinetiqTextSubtle
+            color = colorScheme.onSurfaceVariant
           )
         }
       }
@@ -390,6 +386,9 @@ private fun HabitConsistencyCard(
   habitsCount: Int,
   totalLogs: Int
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
+  val habitTint = semanticColors.habits
   val animRate by animateFloatAsState(
     targetValue = completionRate / 100f,
     animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
@@ -399,9 +398,9 @@ private fun HabitConsistencyCard(
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, KinetiqBorderSubtle, RoundedCornerShape(22.dp)),
+      .border(1.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(22.dp)),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(
@@ -409,17 +408,20 @@ private fun HabitConsistencyCard(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
           Box(
             modifier = Modifier
               .size(38.dp)
-              .background(RadiantAmber.copy(alpha = 0.15f), CircleShape),
+              .background(habitTint.copy(alpha = 0.15f), CircleShape),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.SelfImprovement,
               contentDescription = null,
-              tint = RadiantAmber,
+              tint = habitTint,
               modifier = Modifier.size(18.dp)
             )
           }
@@ -432,12 +434,12 @@ private fun HabitConsistencyCard(
                 letterSpacing = 1.2.sp,
                 fontSize = 10.sp
               ),
-              color = RadiantAmber
+              color = habitTint
             )
             Text(
               text = "$totalLogs completions across $habitsCount active rituals",
               style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-              color = KinetiqTextWhite
+              color = colorScheme.onSurface
             )
           }
         }
@@ -446,7 +448,7 @@ private fun HabitConsistencyCard(
           text = "$completionRate%",
           style = MaterialTheme.typography.titleLarge.copy(
             fontWeight = FontWeight.Black,
-            color = RadiantAmber,
+            color = habitTint,
             fontSize = 26.sp
           )
         )
@@ -460,8 +462,8 @@ private fun HabitConsistencyCard(
           .fillMaxWidth()
           .height(8.dp)
           .clip(RoundedCornerShape(4.dp)),
-        color = RadiantAmber,
-        trackColor = RadiantAmber.copy(alpha = 0.15f)
+        color = habitTint,
+        trackColor = habitTint.copy(alpha = 0.15f)
       )
 
       Spacer(modifier = Modifier.height(12.dp))
@@ -469,7 +471,7 @@ private fun HabitConsistencyCard(
       Text(
         text = "Sustainable habit stack loops reinforce neurological pathways without requiring intense daily willpower. Keep showing up steadily.",
         style = MaterialTheme.typography.bodySmall,
-        color = KinetiqTextMuted
+        color = colorScheme.onSurfaceVariant
       )
     }
   }
@@ -482,19 +484,21 @@ private fun LifestyleTakeawaysCard(
   targetSteps: Int,
   targetSleep: Float
 ) {
+  val colorScheme = MaterialTheme.colorScheme
+  val semanticColors = MaterialTheme.kinetiqColors
   Card(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, KinetiqBorderSubtle, RoundedCornerShape(22.dp)),
+      .border(1.dp, colorScheme.outline.copy(alpha = 0.65f), RoundedCornerShape(22.dp)),
     shape = RoundedCornerShape(22.dp),
-    colors = CardDefaults.cardColors(containerColor = KinetiqCardSurface)
+    colors = CardDefaults.cardColors(containerColor = semanticColors.surface1)
   ) {
     Column(modifier = Modifier.padding(20.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
           imageVector = Icons.Default.Lightbulb,
           contentDescription = null,
-          tint = KinetiqPurpleNeon,
+          tint = colorScheme.primary,
           modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
@@ -505,7 +509,7 @@ private fun LifestyleTakeawaysCard(
             letterSpacing = 1.2.sp,
             fontSize = 10.sp
           ),
-          color = KinetiqPurpleNeon
+          color = colorScheme.primary
         )
       }
 
@@ -514,7 +518,7 @@ private fun LifestyleTakeawaysCard(
       Text(
         text = "• Consistent wake-up anchors stabilize daytime cortisol peaks.\n• 7,500+ daily steps optimizes cardiovascular longevity plateaus without overtraining.\n• Scheduled recovery days allow neuromuscular glycogen recovery.",
         style = MaterialTheme.typography.bodyMedium,
-        color = KinetiqTextWhite,
+        color = colorScheme.onSurface,
         lineHeight = 20.sp
       )
     }

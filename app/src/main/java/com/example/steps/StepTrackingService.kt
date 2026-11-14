@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -148,13 +149,24 @@ class StepTrackingService : Service(), SensorEventListener {
 
     observerJob?.cancel()
     observerJob = serviceScope.launch {
-      repository.getActivityForDate(todayDate).collect { activity ->
+      combine(
+        repository.getActivityForDate(todayDate),
+        repository.userProfile
+      ) { activity, profile ->
         val steps = activity?.stepCount ?: 0
         val distance = activity?.distanceKm ?: 0f
-        val target = activity?.targetSteps ?: 8000
+        val target = profile?.targetSteps ?: activity?.targetSteps ?: 8000
+        Triple(steps, distance, target)
+      }.collect { (steps, distance, target) ->
         notificationManager.notify(
           NOTIFICATION_ID,
           buildNotification(steps, distance, target)
+        )
+        StepMilestoneNotifier.checkAndNotify(
+          context = applicationContext,
+          date = todayDate,
+          steps = steps,
+          targetSteps = target
         )
       }
     }
